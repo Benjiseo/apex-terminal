@@ -342,7 +342,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="news-sig"><div class="news-panel"><div class="panel-hd">📡 속보 전체</div><div id="newsAll"></div></div><div class="sig-panel"><div class="panel-hd">🎯 시그널 전체</div><div id="sigsAll"></div></div></div>
   </div>
 </div>
-<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (H×1+S×2 | search:low) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
+<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (Sonnet×3 | 수동모드) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
 <div class="footer" id="appFooter" style="display:none">APEX CAPITAL TERMINAL v3.5 — HEDGE FUND GRADE · AI LIVE | Token-Optimized Dynamic Engine</div>
 
 <script>
@@ -427,7 +427,7 @@ function P3(){return `NOW:${todayISO()} ${nowKST()}KST. CIO $10B+ hedge fund. We
 "macro_risks":[5 risks. Each:["name_KR",prob0-100,"high/medium/low","affected_sectors"]],
 "hedge":"2-3문장. 포지션사이즈(%AUM), VIX헤지, 섹터로테이션, 옵션전략.",
 "smart":{"brief":"3-4문장. 글로벌 자금흐름 분석. HTML OK.",
-"flows":[["US Eq","inflow/outflow",flow_$B,"trend"],["EU Eq","",0,""],["EM Eq","",0,""],["JP Eq","",0,""],["KR Eq","",0,""],["CN Eq","",0,""],["US Bond","",0,""],["Gold","",0,""],["Crypto","",0,""],["Commodities","",0,""]],
+"flows":[["US Eq","inflow/outflow",daily_flow_$B,"trend"],["EU Eq","",0,""],["EM Eq","",0,""],["JP Eq","",0,""],["KR Eq","",0,""],["CN Eq","",0,""],["US Bond","",0,""],["Gold","",0,""],["Crypto","",0,""],["Commodities","",0,""]],
 "country_rank":[5 countries by inflow:["country",$B,"reason"]],
 "rec":"2-3문장. AUM 배분 비율 제안. HTML OK."}
 }`;}
@@ -441,7 +441,7 @@ async function loadAllData(first=false){
   try{
     if(first)setStep(0);
     const [r1,r2,r3]=await Promise.all([
-      safeFetch(()=>callClaude(P1(),SYS,2500,true,2,HAIKU,3),'P1-numbers'),      // Haiku + 3 searches max
+      safeFetch(()=>callClaude(P1(),SYS,2500,true,2,SONNET,3),'P1-numbers'),     // Sonnet for reliable data
       safeFetch(()=>callClaude(P2(),SYS,4096,true,2,SONNET,4),'P2-stocks'),      // Sonnet + 4 searches max
       safeFetch(()=>callClaude(P3(),SYS,4096,true,2,SONNET,3),'P3-insight')      // Sonnet + 3 searches max
     ]);
@@ -670,7 +670,7 @@ function renderAll(d){
   document.getElementById('flowUsSell').innerHTML='<div class="dpanel-title">유출 $M</div>'+flowList(flt2.us_sell,'var(--dn)');
   // Smart Money on flow page
   const smtF=d.smart||{};const flowsF=(smtF.flows||[]);
-  document.getElementById('flowSmart').innerHTML='<div class="dpanel-title">자산군별 자금 흐름 (주간, $B)</div>'+flowsF.map(f=>{const isIn=f[1]==='inflow';return`<div class="drow flash"><div class="dr-nm">${f[0]}</div><div class="dr-val ${isIn?'up':'dn'}">${isIn?'▲ Inflow':'▼ Outflow'} $${fmt(Math.abs(f[2]||0),1)}B</div><div style="font-size:9px;color:var(--text3)">${f[3]||''}</div></div>`;}).join('');
+  document.getElementById('flowSmart').innerHTML='<div class="dpanel-title">자산군별 자금 흐름 (일간, $B)</div>'+flowsF.map(f=>{const isIn=f[1]==='inflow';return`<div class="drow flash"><div class="dr-nm">${f[0]}</div><div class="dr-val ${isIn?'up':'dn'}">${isIn?'▲ Inflow':'▼ Outflow'} $${fmt(Math.abs(f[2]||0),1)}B</div><div style="font-size:9px;color:var(--text3)">${f[3]||''}</div></div>`;}).join('');
 
   // Breadth
   const rsk=d.risk||{};const br=rsk.breadth||{};
@@ -684,7 +684,7 @@ function renderAll(d){
   const smt=d.smart||{};
   document.getElementById('smartBrief').innerHTML=smt.brief||'—';
   const flows=(smt.flows||[]);
-  document.getElementById('smartFlow').innerHTML='<div class="dpanel-title">자산군별 자금 흐름 (주간, $B)</div>'+flows.map(f=>{const dir=f[1];const amt=f[2]||0;const isIn=dir==='inflow';return`<div class="drow flash"><div class="dr-nm">${f[0]}</div><div class="dr-val ${isIn?'up':'dn'}">${isIn?'▲ Inflow':'▼ Outflow'} $${fmt(Math.abs(amt),1)}B</div><div style="font-size:9px;color:var(--text3)">${f[3]||''}</div></div>`;}).join('');
+  document.getElementById('smartFlow').innerHTML='<div class="dpanel-title">자산군별 자금 흐름 (일간, $B)</div>'+flows.map(f=>{const dir=f[1];const amt=f[2]||0;const isIn=dir==='inflow';return`<div class="drow flash"><div class="dr-nm">${f[0]}</div><div class="dr-val ${isIn?'up':'dn'}">${isIn?'▲ Inflow':'▼ Outflow'} $${fmt(Math.abs(amt),1)}B</div><div style="font-size:9px;color:var(--text3)">${f[3]||''}</div></div>`;}).join('');
   const crank=(smt.country_rank||[]);
   document.getElementById('smartCountry').innerHTML='<div class="dpanel-title">국가별 Smart Money 유입 순위 ($B)</div>'+crank.map((c,i)=>`<div class="drow flash"><div class="dr-nm" style="font-weight:600">#${i+1} ${c[0]}</div><div class="dr-val ${(c[1]||0)>=0?'up':'dn'}">${sign(c[1]||0)}$${fmt(Math.abs(c[1]||0),1)}B</div><div style="font-size:9px;color:var(--text3);max-width:200px;text-align:right">${c[2]||''}</div></div>`).join('');
   document.getElementById('smartRec').innerHTML='<div class="dpanel-title">추천 마켓 포커스</div><div style="font-size:11px;color:var(--text2);line-height:1.6;font-family:var(--sans);padding:4px 0">'+(smt.rec||'—')+'</div>';
