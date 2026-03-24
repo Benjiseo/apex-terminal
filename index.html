@@ -317,12 +317,14 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="news-sig"><div class="news-panel"><div class="panel-hd">📡 속보 전체</div><div id="newsAll"></div></div><div class="sig-panel"><div class="panel-hd">🎯 시그널 전체</div><div id="sigsAll"></div></div></div>
   </div>
 </div>
-<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
+<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (Haiku×2+Sonnet×1) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
 <div class="footer" id="appFooter" style="display:none">APEX CAPITAL TERMINAL v2.1 — HEDGE FUND GRADE · AI LIVE | Token-Optimized Dynamic Engine</div>
 
 <script>
 let API_KEY='',D=null;
-const API_URL='https://api.anthropic.com/v1/messages',MODEL='claude-sonnet-4-20250514';
+const API_URL='https://api.anthropic.com/v1/messages';
+const HAIKU='claude-haiku-4-5-20251001';  // cheap: $0.80/M in, $4/M out — for data fetching
+const SONNET='claude-sonnet-4-20250514';  // smart: $3/M in, $15/M out — for analysis only
 let totalCalls=0,totalIn=0,totalOut=0;
 let autoTimer=null,autoCount=0,autoRunning=false,countdownTimer=null,countdownSec=0;
 
@@ -340,15 +342,15 @@ function showGateError(m){const e=document.getElementById('gateError');e.textCon
 const STEPS=['글로벌 지수·환율·원자재 스캔...','오늘의 주도주·급등락 종목 탐색...','뉴스·시그널·리스크 분석...','렌더링...'];
 function setStep(i){document.getElementById('lsStepText').textContent=STEPS[i]||'완료...';document.getElementById('lsProgress').style.width=Math.round((i/STEPS.length)*100)+'%';}
 
-async function callClaude(prompt,sys,maxTok,search=true,retries=2){
+async function callClaude(prompt,sys,maxTok,search=true,retries=2,model=HAIKU){
   for(let attempt=0;attempt<=retries;attempt++){
     try{
-      const body={model:MODEL,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
+      const body={model:model,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
       if(search)body.tools=[{"type":"web_search_20250305","name":"web_search"}];
       const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
       if(!r.ok){const e=await r.text();if(attempt<retries){await new Promise(w=>setTimeout(w,2000));continue;}throw new Error('API '+r.status+': '+e.slice(0,80));}
       const d=await r.json();
-      if(d.usage){totalCalls++;totalIn+=d.usage.input_tokens||0;totalOut+=d.usage.output_tokens||0;updCost();}
+      if(d.usage){totalCalls++;const iT=d.usage.input_tokens||0,oT=d.usage.output_tokens||0;totalIn+=iT;totalOut+=oT;if(model===HAIKU){haikuIn+=iT;haikuOut+=oT;}else{sonnetIn+=iT;sonnetOut+=oT;}updCost();}
       const t=d.content.filter(b=>b.type==='text').map(b=>b.text).join('');
       const c=t.replace(/```json[\s\S]*?```/g,m=>m.slice(7,-3)).replace(/```[\s\S]*?```/g,m=>m.slice(3,-3)).trim();
       const j=c.match(/\{[\s\S]*\}/);
@@ -357,7 +359,11 @@ async function callClaude(prompt,sys,maxTok,search=true,retries=2){
     }catch(e){if(attempt>=retries)throw e;console.warn('Retry '+attempt+':',e.message);await new Promise(w=>setTimeout(w,1500));}
   }
 }
-function updCost(){document.getElementById('costCalls').textContent=totalCalls;document.getElementById('costIn').textContent=totalIn.toLocaleString();document.getElementById('costOut').textContent=totalOut.toLocaleString();document.getElementById('costUsd').textContent='$'+((totalIn*3+totalOut*15)/1e6).toFixed(4);}
+let haikuIn=0,haikuOut=0,sonnetIn=0,sonnetOut=0;
+function updCost(){document.getElementById('costCalls').textContent=totalCalls;document.getElementById('costIn').textContent=totalIn.toLocaleString();document.getElementById('costOut').textContent=totalOut.toLocaleString();
+// Haiku: $0.80/$4, Sonnet: $3/$15 per M tokens
+const cost=(haikuIn*0.8+haikuOut*4+sonnetIn*3+sonnetOut*15)/1e6;
+document.getElementById('costUsd').textContent='$'+cost.toFixed(4);}
 
 function today(){const d=new Date();return d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'long'});}
 function todayISO(){return new Date().toISOString().split('T')[0];}
@@ -365,45 +371,36 @@ function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'A
 
 const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble. Use web search for REAL-TIME market data at this exact moment. Never guess. Be concise — minimize token usage while maintaining data accuracy.';
 
-function P1(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. THIS IS THE EXACT MOMENT. Search web for prices AS OF RIGHT NOW.
-Do NOT use cached/old data. Get the LATEST real-time quotes. ALL prices in USD.
-Return JSON arrays. Each: [name, price_USD, change%, note]. note: sidecar/circuit only, else "".
+function P1(){return `NOW:${todayISO()} ${nowKST()}KST. Web search LATEST prices NOW. JSON only. All USD.
+{"i":[[name,price,chg%,note]x12:KOSPI,KOSDAQ,S&P500,NASDAQ,DOW,Russell2000,Nikkei,HangSeng,Shanghai,DAX,FTSE100,ASX200],
+"f":[[name,rate,chg%]x8:USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW,EUR/USD,USD/JPY,GBP/USD,DXY],
+"c":[[name,price,chg%,unit]x8:WTI,Brent,NatGas,Gold,Silver,Copper,Wheat,IronOre],
+"b":[[name,yield,chg]x4:US10Y,US2Y,KR10Y,VIX],
+"cr":[[name,price_usd,chg%]x5:BTC,ETH,SOL,XRP,BNB]}`;}
 
-{"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
-"f":[["USD/KRW",0,0],["JPY/KRW",0,0],["EUR/KRW",0,0],["CNY/KRW",0,0],["EUR/USD",0,0],["USD/JPY",0,0],["GBP/USD",0,0],["DXY",0,0]],
-"c":[["WTI",0,0,"$/bbl"],["Brent",0,0,"$/bbl"],["NatGas",0,0,"$/MMBtu"],["Gold",0,0,"$/oz"],["Silver",0,0,"$/oz"],["Copper",0,0,"$/lb"],["Wheat",0,0,"$/bu"],["IronOre",0,0,"$/t"]],
-"b":[["US10Y",0,0],["US2Y",0,0],["KR10Y",0,0],["VIX",0,0]],
-"cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}`;}
+function P2(){return `NOW:${todayISO()} ${nowKST()}KST. Web search REAL-TIME. All USD. JSON only.
+Today's movers only(biggest moves/volume/news).
+{"kr":[10 KR stocks:[name,ticker,price_usd,chg%,reason]],
+"us":[10 US stocks:[name,ticker,price_usd,chg%,reason]],
+"gl":[8 Asia+EU:[name,ticker,price_usd,chg%,reason]],
+"sec_kr":[12 KR sectors:[name,chg%,signal,conf1-5,reason,theme,[[stk,chg%]x3]]],
+"sec_us":[11 US sectors(Tech,Health,Fin,Energy,CDisc,CStap,Indust,Mat,Util,RE,Comm):[name,chg%,signal,conf1-5,reason,theme,[[stk,chg%]x3]]],
+"sd":{"k":[[who,net$M]x4:Foreign,Inst,Pension,Retail],"q":[[who,net$M]x4]}}`;}
 
-function P2(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. Prop desk. Search web for REAL-TIME data AS OF NOW.
-ALL prices in USD. Korean stocks: KRW÷USD/KRW. Flows in $M. Get LATEST quotes, not cached.
-Find RIGHT NOW's movers — biggest moves, volume spikes, breaking news at this moment.
-
-Return JSON:
-{"kr":[10 Korean stocks. Each:["name","ticker",price_USD,change%,"reason"]],
-"us":[10 US stocks. Each:["name","ticker",price_USD,change%,"reason"]],
-"gl":[8 Asia+Europe. Each:["name","ticker",price_USD,change%,"reason"]],
-"sec_kr":[12 Korean sectors. Each:["name",chg%,"BUY/SELL/HOLD/WATCH",conf1-5,"reason","theme",[["stk1",chg%],["stk2",chg%],["stk3",chg%]]]],
-"sec_us":[11 US sectors(Tech,Healthcare,Finance,Energy,ConsDisc,ConsStap,Industrial,Materials,Utilities,RealEstate,Comm). Each:["name",chg%,"BUY/SELL/HOLD/WATCH",conf1-5,"reason","theme",[["stk1",chg%],["stk2",chg%],["stk3",chg%]]]],
-"sd":{"k":[["Foreign",net_$M],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]}}`;}
-
-function P3(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. You are CIO of $10B+ hedge fund. Search web RIGHT NOW for BREAKING news.
-CRITICAL: All data must reflect THIS EXACT MOMENT (${nowKST()} KST). Not morning, not hours ago. THE LATEST.
-
-Return JSON:
-{"n":[8 BREAKING news as of ${nowKST()} KST. Newest first. Each: ["HH:MM","headline_Korean","HOT/WARN/TRADE/ECO","impact for prop trading desk"]],
-"sg":[6 actionable signals based on RIGHT NOW market state. Each: ["stock_name","LONG/SHORT/EXIT/WATCH","entry logic",conf1-5,"target","stop_loss"]],
-"cal":[5 upcoming key economic/earnings events this week+next week. Each: ["date_MM/DD","time_HH:MM","event_Korean","expected_impact(high/medium/low)","forecast_value"]],
-"br":"5-6 sentences Korean. CIO briefing as of ${nowKST()} KST on ${todayISO()}. 1)Market regime RIGHT NOW vs yesterday 2)Leading/lagging sectors 3)Foreign/institutional flow 4)Key risk+tail risk 5)Position recommendation(long/short/neutral+%AUM) 6)Next events today. HTML: <strong>,<span class=up>,<span class=dn>,<span class=acc>",
-"wk":"3-4 sentences Korean. This WEEK review + NEXT WEEK forecast: 1)이번주 요약 2)다음주 주요 이벤트(FOMC,CPI등) 3)다음주 예상 방향+근거. HTML OK.",
-"mo":"3-4 sentences Korean. This MONTH review + NEXT MONTH forecast: 1)이번달 요약 2)다음달 매크로 이벤트 3)다음달 예상 섹터로테이션+방향. HTML OK.",
-"risk":{"vixLevel":"low/elevated/high/extreme","yieldCurve":"normal/flat/inverted","putCallRatio":0.0,"breadth":{"advDecl":"상승N/하락N","newHighLow":"신고가N/신저가N"},"sentiment":"extreme fear/fear/neutral/greed/extreme greed","keyRisk":"1-2 sentence key risk in Korean"},
-"macro_risks":[5 major macro/geopolitical risks. Each:["risk_name_Korean","probability_0to100_of_market_impact_this_month","impact_if_occurs(high/medium/low)","affected_sectors"]],
-"hedge":"2-3 sentences Korean. Position sizing(% AUM), VIX hedge, sector rotation, options strategy.",
-"smart":{"brief":"Smart Money 자금흐름 분석 3-4문장. 글로벌 자금이 현재 어디로 이동 중인지. 주식→채권? 선진국→신흥국? 성장→가치? 원자재→가상자산? HTML태그 사용.",
-"flows":[["US Equities","inflow/outflow",flow_$B_weekly,"trend"],["EU Equities","",0,""],["EM Equities","",0,""],["Japan Equities","",0,""],["Korea Equities","",0,""],["China Equities","",0,""],["US Bonds","",0,""],["Gold","",0,""],["Crypto","",0,""],["Commodities","",0,""]],
-"country_rank":[5 countries ranked by smart money inflow. Each:["country",net_flow_$B,"reason"]],
-"rec":"추천 마켓 포커스 2-3문장. 어디에 자금 비중을 높여야 하는지, 어디서 빼야 하는지. AUM 배분 비율 제안. HTML태그 사용."}
+function P3(){return `NOW:${todayISO()} ${nowKST()}KST. CIO $10B+ hedge fund. Web search for BREAKING news RIGHT NOW. JSON only.
+{"n":[8 news as of NOW. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action point: what to do about this news(Korean,1sentence)"]],
+"sg":[6 trade signals NOW. Each:["stock","LONG/SHORT/EXIT/WATCH","entry logic",conf1-5,"target","stop"]],
+"cal":[5 events this+next week. Each:["MM/DD","HH:MM","event_KR","high/medium/low","forecast"]],
+"br":["CIO 브리핑1: 현재 장세 요약 2-3문장(${nowKST()}KST 기준 시장 상태, 전일대비 변화, 주도섹터). HTML OK.","CIO 브리핑2: 수급/포지션 2-3문장(외국인/기관 방향, 프로그램매매, 포지션 권고 롱/숏+AUM%). HTML OK.","CIO 브리핑3: 리스크/이벤트 2-3문장(핵심 리스크, 블랙스완 시나리오, 오늘 잔여 이벤트). HTML OK."],
+"wk":"3-4문장. 이번주 리뷰+다음주 예측: 주요이벤트, 예상방향, 근거. HTML OK.",
+"mo":"3-4문장. 이번달 리뷰+다음달 예측: 매크로이벤트, 섹터로테이션. HTML OK.",
+"risk":{"vixLevel":"","yieldCurve":"","putCallRatio":0,"breadth":{"advDecl":"","newHighLow":""},"sentiment":"","keyRisk":""},
+"macro_risks":[5 risks. Each:["name_KR",prob0-100,"high/medium/low","affected_sectors"]],
+"hedge":"2-3문장. 포지션사이즈(%AUM), VIX헤지, 섹터로테이션, 옵션전략.",
+"smart":{"brief":"3-4문장. 글로벌 자금흐름 분석. HTML OK.",
+"flows":[["US Eq","inflow/outflow",flow_$B,"trend"],["EU Eq","",0,""],["EM Eq","",0,""],["JP Eq","",0,""],["KR Eq","",0,""],["CN Eq","",0,""],["US Bond","",0,""],["Gold","",0,""],["Crypto","",0,""],["Commodities","",0,""]],
+"country_rank":[5 countries by inflow:["country",$B,"reason"]],
+"rec":"2-3문장. AUM 배분 비율 제안. HTML OK."}
 }`;}
 
 
@@ -415,9 +412,9 @@ async function loadAllData(first=false){
   try{
     if(first)setStep(0);
     const [r1,r2,r3]=await Promise.all([
-      safeFetch(()=>callClaude(P1(),SYS,4000,true),'P1-numbers'),
-      safeFetch(()=>callClaude(P2(),SYS,4000,true),'P2-stocks'),
-      safeFetch(()=>callClaude(P3(),SYS,4000,true),'P3-insight')
+      safeFetch(()=>callClaude(P1(),SYS,2000,true,2,HAIKU),'P1-numbers'),     // Haiku: cheap data fetch
+      safeFetch(()=>callClaude(P2(),SYS,3000,true,2,HAIKU),'P2-stocks'),      // Haiku: cheap data fetch
+      safeFetch(()=>callClaude(P3(),SYS,4096,true,2,SONNET),'P3-insight')     // Sonnet: smart analysis
     ]);
     if(first)setStep(3);
     if(!r1&&!r2&&!r3)throw new Error('All 3 API calls failed');
@@ -435,7 +432,7 @@ async function loadInsightOnly(){
   document.getElementById('refreshOverlay').classList.add('show');
   document.getElementById('refreshOverlayText').textContent='뉴스·시그널 갱신 중...';
   try{
-    const r3=await callClaude(P3(),SYS,4000,true);
+    const r3=await callClaude(P3(),SYS,4096,true,2,SONNET);
     if(D){
       const ins=decodeInsight(r3);
       const old=new Set((D.news||[]).map(n=>n.title));
@@ -484,7 +481,7 @@ function decodeInsight(r3){
     news:(r3.n||[]).map(r=>({time:r[0],title:r[1],badge:r[2],cat:bm[r[2]]||'nb-eco',impact:r[3]})),
     signals:(r3.sg||[]).map(r=>({ticker:r[0],action:r[1],reason:r[2],conf:r[3],target:r[4]||'',stop:r[5]||''})),
     calendar:(r3.cal||[]).map(r=>({date:r[0],time:r[1],event:r[2],impact:r[3],forecast:r[4]||''})),
-    brief:r3.br||'',
+    briefs:Array.isArray(r3.br)?r3.br:[r3.br||''],
     weekly:r3.wk||'',
     monthly:r3.mo||'',
     risk:r3.risk||{},
@@ -539,8 +536,10 @@ function renderAll(d){
   const tk=[d.indices?.kospi,d.indices?.kosdaq,d.indices?.sp500,d.indices?.nasdaq,d.fx?.usdkrw,d.commodities?.wti,d.commodities?.gold,d.crypto?.BTC||Object.values(d.crypto||{})[0]].filter(Boolean);
   document.getElementById('tickerTrack').innerHTML=[...tk,...tk].map(i=>`<div class="t-item"><span class="t-lbl">${i.name}</span><span class="t-val">${fmt(i.val,decF(i.val))}</span><span class="t-chg ${cls(i.chg)}">${sign(i.chg)}${fmt(i.chg,2)}%</span></div>`).join('');
 
-  // Brief + Weekly + Monthly
-  document.getElementById('briefText').innerHTML=d.brief||'—';
+  // Briefs (3 panels) + Weekly + Monthly
+  const bfs=d.briefs||['—'];
+  const bfTitles=['📊 장세 요약','💰 수급/포지션','⚠ 리스크/이벤트'];
+  document.getElementById('briefText').innerHTML=bfs.map((b,i)=>`<div style="margin-bottom:${i<bfs.length-1?'10px':'0'};padding-bottom:${i<bfs.length-1?'10px':'0'};border-bottom:${i<bfs.length-1?'1px solid var(--border)':'none'}"><span style="font-size:9px;color:var(--accent);font-weight:600">${bfTitles[i]||'📡 '+(i+1)}</span><br>${b}</div>`).join('');
   document.getElementById('weeklyText').innerHTML=d.weekly||'—';
   document.getElementById('monthlyText').innerHTML=d.monthly||'—';
 
