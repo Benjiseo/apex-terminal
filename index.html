@@ -298,7 +298,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="data2"><div><div class="sec-label">김치프리미엄</div><div class="dpanel" id="cryptoKimchi"></div></div><div><div class="sec-label">공포탐욕·도미넌스</div><div class="dpanel" id="cryptoFear"></div></div></div>
   </div>
   <div class="page" id="page-sectors">
-    <div><div class="sec-label">섹터 히트맵</div><div class="heatmap" id="secHeatmap"></div></div>
+    <div><div class="sec-label">섹터 히트맵 (전체)</div><div class="heatmap" id="secHeatmap"></div></div>
     <div><div class="sec-label">섹터 상세 분석</div><div class="sectors-grid" id="secDetail"></div></div>
   </div>
   <div class="page" id="page-flow">
@@ -342,13 +342,13 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="news-sig"><div class="news-panel"><div class="panel-hd">📡 속보 전체</div><div id="newsAll"></div></div><div class="sig-panel"><div class="panel-hd">🎯 시그널 전체</div><div id="sigsAll"></div></div></div>
   </div>
 </div>
-<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (Haiku×1+Sonnet×2) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
+<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (H×1+S×2 | search:low) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
 <div class="footer" id="appFooter" style="display:none">APEX CAPITAL TERMINAL v3.5 — HEDGE FUND GRADE · AI LIVE | Token-Optimized Dynamic Engine</div>
 
 <script>
 let API_KEY='',D=null;
 const API_URL='https://api.anthropic.com/v1/messages';
-const HAIKU='claude-haiku-4-5-20251001';  // cheap: $0.80/M in, $4/M out — for data fetching
+const HAIKU='claude-3-5-haiku-20241022';  // cheap: $0.80/M in, $4/M out — for data fetching
 const SONNET='claude-sonnet-4-20250514';  // smart: $3/M in, $15/M out — for analysis only
 let totalCalls=0,totalIn=0,totalOut=0;
 let autoTimer=null,autoCount=0,autoRunning=false,countdownTimer=null,countdownSec=0;
@@ -367,11 +367,11 @@ function showGateError(m){const e=document.getElementById('gateError');e.textCon
 const STEPS=['글로벌 지수·환율·원자재 스캔...','오늘의 주도주·급등락 종목 탐색...','뉴스·시그널·리스크 분석...','렌더링...'];
 function setStep(i){document.getElementById('lsStepText').textContent=STEPS[i]||'완료...';document.getElementById('lsProgress').style.width=Math.round((i/STEPS.length)*100)+'%';}
 
-async function callClaude(prompt,sys,maxTok,search=true,retries=2,model=HAIKU){
+async function callClaude(prompt,sys,maxTok,search=true,retries=2,model=HAIKU,maxSearch=3){
   for(let attempt=0;attempt<=retries;attempt++){
     try{
       const body={model:model,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
-      if(search)body.tools=[{"type":"web_search_20250305","name":"web_search"}];
+      if(search)body.tools=[{"type":"web_search_20250305","name":"web_search","max_uses":maxSearch,"search_context_size":"low"}];
       const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
       if(!r.ok){const e=await r.text();if(attempt<retries){await new Promise(w=>setTimeout(w,2000));continue;}throw new Error('API '+r.status+': '+e.slice(0,80));}
       const d=await r.json();
@@ -441,9 +441,9 @@ async function loadAllData(first=false){
   try{
     if(first)setStep(0);
     const [r1,r2,r3]=await Promise.all([
-      safeFetch(()=>callClaude(P1(),SYS,2500,true,2,HAIKU),'P1-numbers'),     // Haiku: data fetch with explicit schema
-      safeFetch(()=>callClaude(P2(),SYS,4096,true,2,SONNET),'P2-stocks'),     // Sonnet: accurate stocks+sectors
-      safeFetch(()=>callClaude(P3(),SYS,4096,true,2,SONNET),'P3-insight')     // Sonnet: smart analysis
+      safeFetch(()=>callClaude(P1(),SYS,2500,true,2,HAIKU,3),'P1-numbers'),      // Haiku + 3 searches max
+      safeFetch(()=>callClaude(P2(),SYS,4096,true,2,SONNET,4),'P2-stocks'),      // Sonnet + 4 searches max
+      safeFetch(()=>callClaude(P3(),SYS,4096,true,2,SONNET,3),'P3-insight')      // Sonnet + 3 searches max
     ]);
     if(first)setStep(3);
     if(!r1&&!r2&&!r3)throw new Error('All 3 API calls failed');
@@ -461,7 +461,7 @@ async function loadInsightOnly(){
   document.getElementById('refreshOverlay').classList.add('show');
   document.getElementById('refreshOverlayText').textContent='뉴스·시그널 갱신 중...';
   try{
-    const r3=await callClaude(P3(),SYS,4096,true,2,SONNET);
+    const r3=await callClaude(P3(),SYS,4096,true,2,SONNET,3);
     if(D){
       const ins=decodeInsight(r3);
       const old=new Set((D.news||[]).map(n=>n.title));
@@ -715,7 +715,7 @@ async function runAnalysis(){
 "sector":{"name":"소속 섹터","sector_chg%":0,"peers":[[peer_name,chg%]x3],"correlation":"어떤 섹터/테마와 같이 봐야하는지 1-2문장"},
 "macro":{"events":[3 macro events next 3mo affecting this stock:["event","date","impact_prob%","detail"]],"correlation":"거시 연관성 2-3문장. HTML OK."},
 "signal":{"action":"LONG/SHORT/HOLD/WATCH","conf":1-5,"target_price":"$X","stop_loss":"$X","horizon":"단기/중기/장기","rationale":"시그널 근거 2문장"}}`;
-    const r=await callClaude(prompt,SYS,3000,true,2,SONNET);
+    const r=await callClaude(prompt,SYS,3000,true,2,SONNET,2);
     document.getElementById('analysisResult').style.display='';
     document.getElementById('anaTitle').textContent=`📋 ${r.name||ticker} (${r.ticker}) — $${fmt(r.price_usd||0,2)} ${sign(r['chg%']||0)}${fmt(r['chg%']||0,2)}%`;
     document.getElementById('anaReport').innerHTML=r.summary||'—';
@@ -769,17 +769,18 @@ document.getElementById('analysisInput')?.addEventListener('keydown',e=>{if(e.ke
 function renderHeatmap(){
   if(!D)return;
   const m=document.getElementById('hmMarket')?.value||'kr';
+  const kr=D.sectors_kr||[],us=D.sectors_us||[];
   let sec;
-  if(m==='kr')sec=D.sectors_kr||[];
-  else if(m==='us')sec=D.sectors_us||[];
-  else sec=[...(D.sectors_kr||[]),...(D.sectors_us||[])];
-  // Fallback: if selected market has no data, try all available
-  if(!sec.length) sec=[...(D.sectors_kr||[]),...(D.sectors_us||[])];
+  if(m==='kr')sec=kr.length?kr:[...kr,...us];
+  else if(m==='us')sec=us.length?us:[...kr,...us];
+  else sec=[...kr,...us];
+  if(!sec.length)sec=[...kr,...us];
+  const mktLabel={'kr':'🇰🇷 한국','us':'🇺🇸 미국','gl':'🌏 글로벌'}[m]||'글로벌';
   const html=heatmapH(sec);
-  document.getElementById('ovHeatmap').innerHTML=html||'<div style="padding:12px;color:var(--text3);font-size:11px">섹터 데이터 로딩 중... REFRESH를 눌러주세요</div>';
-  // Also update sectors page heatmap
+  document.getElementById('ovHeatmap').innerHTML=html||`<div style="padding:12px;color:var(--text3);font-size:11px">${mktLabel} 섹터 데이터 없음 — REFRESH 눌러주세요</div>`;
+  document.getElementById('hmTime').textContent=nowKST()+' KST · '+mktLabel+' · '+sec.length+'개 섹터';
   const secPage=document.getElementById('secHeatmap');
-  if(secPage)secPage.innerHTML=heatmapH([...(D.sectors_kr||[]),...(D.sectors_us||[])]);
+  if(secPage)secPage.innerHTML=heatmapH([...kr,...us]);
 }
 </script>
 </body>
