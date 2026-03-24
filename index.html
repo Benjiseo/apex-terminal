@@ -266,7 +266,9 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="data2"><div class="brief-bar" style="border-color:rgba(99,132,255,.15)"><div class="brief-icon">📅</div><div class="brief-body"><div class="brief-title">WEEKLY OUTLOOK</div><div class="brief-text" id="weeklyText">—</div></div></div><div class="brief-bar" style="border-color:rgba(255,195,0,.15)"><div class="brief-icon">📊</div><div class="brief-body"><div class="brief-title">MONTHLY TREND</div><div class="brief-text" id="monthlyText">—</div></div></div></div>
     <div><div class="sec-label">글로벌 주요 지수</div><div class="idx-grid" id="ovIndices"></div></div>
     <div><div class="sec-label">환율 · 원자재 · 가상자산</div><div class="data3" id="ovMacro"></div></div>
+    <div class="data3"><div><div class="sec-label">🇰🇷 거래대금 주도주</div><div class="stocks-grid" id="ovKrLeaders"></div></div><div><div class="sec-label">🇺🇸 거래대금 주도주</div><div class="stocks-grid" id="ovUsLeaders"></div></div><div><div class="sec-label">🌏 글로벌 거래대금 주도주</div><div class="stocks-grid" id="ovGlLeaders"></div></div></div>
     <div><div class="sec-label">섹터 히트맵 <select class="ref-sel" id="hmMarket" onchange="renderHeatmap()" style="margin-left:8px"><option value="kr">🇰🇷 한국</option><option value="us">🇺🇸 미국</option><option value="gl">🌏 글로벌</option></select> <span id="hmTime" style="font-size:9px;color:var(--text3);margin-left:6px"></span></div><div class="heatmap" id="ovHeatmap"></div></div>
+    <div><div class="sec-label">섹터 상세 수급 (오버뷰)</div><div class="sectors-grid" id="ovSectorDetail"></div></div>
     <div class="data2"><div><div class="sec-label">💰 Smart Money 요약</div><div class="dpanel" id="ovSmartBrief"></div></div><div><div class="sec-label">📊 시장별 수급 현황</div><div class="dpanel" id="ovMarketFlow"></div></div></div>
     <div class="data4"><div><div class="sec-label">🇰🇷 외국인·기관 순매수 TOP</div><div class="dpanel" id="ovFlowKrBuy"></div></div><div><div class="sec-label">🇰🇷 순매도 TOP</div><div class="dpanel" id="ovFlowKrSell"></div></div><div><div class="sec-label">🇺🇸 기관 유입 TOP</div><div class="dpanel" id="ovFlowUsBuy"></div></div><div><div class="sec-label">🇺🇸 기관 유출 TOP</div><div class="dpanel" id="ovFlowUsSell"></div></div></div>
     <div><div class="sec-label">주요 예정 일정</div><div class="dpanel" id="calPanel"></div></div>
@@ -416,11 +418,11 @@ function P2(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web fo
 "sd":{"k":[["Foreign",net_millions_usd],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]},
 "flow_top":{"kr_buy":[["stock",net_$M],...5 largest foreign+inst net buy],"kr_sell":[["stock",net_$M],...5 largest net sell],"us_buy":[["stock",net_$M],...5 largest inst inflow],"us_sell":[["stock",net_$M],...5 largest outflow]}}`;}
 
-function P3(){return `NOW:${todayISO()} ${nowKST()}KST. CIO $10B+ hedge fund. Web search for BREAKING news RIGHT NOW. JSON only.
-{"n":[8 news as of NOW. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action point: what to do about this news(Korean,1sentence)"]],
+function P3(){return `EXACT TIME RIGHT NOW: ${todayISO()} ${nowKST()} KST. You MUST search web for news/data from TODAY ${todayISO()} ONLY. Do NOT use old/cached data. CIO $10B+ hedge fund. JSON only.
+{"n":[8 BREAKING news from TODAY ${todayISO()} ONLY. Must be today's date. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action point(Korean,1sentence)"]],
 "sg":[6 trade signals NOW. Each:["stock","LONG/SHORT/EXIT/WATCH","entry logic",conf1-5,"target","stop"]],
 "cal":[5 events this+next week. Each:["MM/DD","HH:MM","event_KR","high/medium/low","forecast"]],
-"br":["CIO 브리핑1: 현재 장세 요약 2-3문장(${nowKST()}KST 기준 시장 상태, 전일대비 변화, 주도섹터). HTML OK.","CIO 브리핑2: 수급/포지션 2-3문장(외국인/기관 방향, 프로그램매매, 포지션 권고 롱/숏+AUM%). HTML OK.","CIO 브리핑3: 리스크/이벤트 2-3문장(핵심 리스크, 블랙스완 시나리오, 오늘 잔여 이벤트). HTML OK."],
+"br":["CIO 브리핑1: ${todayISO()} ${nowKST()}KST 기준 실시간 장세 요약 2-3문장(지금 시장 상태, 전일대비 변화, 주도섹터). HTML OK.","CIO 브리핑2: 오늘 ${todayISO()} 수급/포지션 2-3문장(외국인/기관 방향, 프로그램매매, 포지션 권고 롱/숏+AUM%). HTML OK.","CIO 브리핑3: 오늘 ${todayISO()} 리스크/이벤트 2-3문장(핵심 리스크, 블랙스완 시나리오, 오늘 잔여 이벤트). HTML OK."],
 "wk":"3-4문장. 이번주 리뷰+다음주 예측: 주요이벤트, 예상방향, 근거. HTML OK.",
 "mo":"3-4문장. 이번달 리뷰+다음달 예측: 매크로이벤트, 섹터로테이션. HTML OK.",
 "risk":{"vixLevel":"","yieldCurve":"","putCallRatio":0,"breadth":{"advDecl":"","newHighLow":""},"sentiment":"","keyRisk":""},
@@ -589,8 +591,18 @@ function renderAll(d){
     `<div class="dpanel flash"><div class="dpanel-title">COMMODITIES — 원자재</div>${coH}</div>`+
     `<div class="dpanel flash"><div class="dpanel-title">CRYPTO — 가상자산</div>${crH}</div>`;
 
+  // Overview leaders (dollar volume)
+  document.getElementById('ovKrLeaders').innerHTML=(d.kr_stocks||[]).slice(0,5).map(s=>stockC(s)).join('')||'<div style="padding:8px;color:var(--text3);font-size:10px">데이터 없음</div>';
+  document.getElementById('ovUsLeaders').innerHTML=(d.us_stocks||[]).slice(0,5).map(s=>stockC(s)).join('')||'<div style="padding:8px;color:var(--text3);font-size:10px">데이터 없음</div>';
+  document.getElementById('ovGlLeaders').innerHTML=(d.gl_stocks||[]).slice(0,5).map(s=>stockC(s)).join('')||'<div style="padding:8px;color:var(--text3);font-size:10px">데이터 없음</div>';
+
   renderHeatmap();
   document.getElementById('hmTime').textContent=nowKST()+' KST';
+
+  // Overview sector detail
+  const sm2={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'};
+  const ovSec=[...(d.sectors_kr||[]).slice(0,6),...(d.sectors_us||[]).slice(0,6)];
+  document.getElementById('ovSectorDetail').innerHTML=ovSec.length?ovSec.map(s=>{const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm2[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div>${tops?'<div style="margin-top:4px">'+tops+'</div>':''}</div>`;}).join(''):'<div style="padding:8px;color:var(--text3);font-size:10px">섹터 데이터 없음</div>';
 
   // Overview Smart Money + Market Flow
   const smt2=d.smart||{};
