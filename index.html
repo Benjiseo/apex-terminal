@@ -65,7 +65,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
 .ai-dot{width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:pulse 2s ease infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .h-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.clock{font-size:12px;color:var(--accent);font-weight:500;letter-spacing:.04em;min-width:68px;text-align:right;}
+.clock{font-size:15px;color:var(--accent);font-weight:700;letter-spacing:.06em;min-width:180px;text-align:right;line-height:1.2;}
+.clock-date{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:.04em;}
 .ref-ctrl{display:flex;align-items:center;gap:4px;}
 .ref-btn{display:flex;align-items:center;gap:4px;padding:5px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:600;cursor:pointer;letter-spacing:.05em;transition:all .15s;white-space:nowrap;}
 .ref-btn:hover{background:#7b9bff;}
@@ -232,7 +233,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="h-stat"><span class="h-stat-l">VIX</span><span class="h-stat-v" id="hVix">—</span></div>
   </div>
   <div class="h-right">
-    <div class="clock" id="clock">--:--:--</div>
+    <div class="clock"><div id="clock">--:--:--</div><div class="clock-date" id="clockDate">—</div></div>
     <div class="ref-ctrl">
       <button class="ref-btn" id="manualBtn" onclick="doManualRefresh()"><span class="spinning-wrap" id="spinIcon">⟳</span> REFRESH</button>
       <select class="ref-sel" id="autoInterval"><option value="60">1분</option><option value="180" selected>3분</option><option value="300">5분</option><option value="600">10분</option></select>
@@ -265,7 +266,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div><div class="sec-label">글로벌 주요 지수</div><div class="idx-grid" id="ovIndices"></div></div>
     <div><div class="sec-label">환율 · 원자재 · 가상자산</div><div class="data3" id="ovMacro"></div></div>
     <div><div class="sec-label">섹터 히트맵 <select class="ref-sel" id="hmMarket" onchange="renderHeatmap()" style="margin-left:8px"><option value="kr">🇰🇷 한국</option><option value="us">🇺🇸 미국</option><option value="gl">🌏 글로벌</option></select> <span id="hmTime" style="font-size:9px;color:var(--text3);margin-left:6px"></span></div><div class="heatmap" id="ovHeatmap"></div></div>
-    <div><div class="sec-label">속보 · 시그널</div><div class="news-sig"><div class="news-panel"><div class="panel-hd">⚡ BREAKING NEWS</div><div id="ovNews"></div></div><div class="sig-panel"><div class="panel-hd">🎯 TRADE SIGNALS</div><div id="ovSignals"></div></div></div></div>
+    <div><div class="sec-label">주요 예정 일정</div><div class="dpanel" id="calPanel"></div></div>
+    <div><div class="sec-label">속보 · 시그널</div><div class="news-sig"><div class="news-panel"><div class="panel-hd">⚡ BREAKING NEWS <span style="font-size:8px;color:var(--warn)" id="newsTime"></span></div><div id="ovNews"></div></div><div class="sig-panel"><div class="panel-hd">🎯 TRADE SIGNALS</div><div id="ovSignals"></div></div></div></div>
   </div>
   <div class="page" id="page-korea">
     <div><div class="sec-label">코스피 · 코스닥</div><div class="idx-grid" id="krIndices"></div></div>
@@ -324,7 +326,7 @@ const API_URL='https://api.anthropic.com/v1/messages',MODEL='claude-sonnet-4-202
 let totalCalls=0,totalIn=0,totalOut=0;
 let autoTimer=null,autoCount=0,autoRunning=false,countdownTimer=null,countdownSec=0;
 
-function tickClock(){const k=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));document.getElementById('clock').textContent=k.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
+function tickClock(){const k=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));document.getElementById('clock').textContent=k.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});const dd=document.getElementById('clockDate');if(dd)dd.textContent=k.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'})+' KST';}
 setInterval(tickClock,1000);tickClock();
 
 document.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));t.classList.add('active');const p=document.getElementById('page-'+t.dataset.tab);if(p)p.classList.add('active');});});
@@ -359,12 +361,12 @@ function updCost(){document.getElementById('costCalls').textContent=totalCalls;d
 
 function today(){const d=new Date();return d.toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'long'});}
 function todayISO(){return new Date().toISOString().split('T')[0];}
-function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
+function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
 
-const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks. Use web search to get today\'s REAL market data. Never guess.';
+const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble. Use web search for REAL-TIME market data at this exact moment. Never guess. Be concise — minimize token usage while maintaining data accuracy.';
 
-function P1(){return `Date: ${todayISO()} ${nowKST()} KST. Search web for REAL current prices.
-ALL prices in USD. Korean stocks in USD equivalent (divide KRW price by current USD/KRW rate). All trading volumes in USD.
+function P1(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. THIS IS THE EXACT MOMENT. Search web for prices AS OF RIGHT NOW.
+Do NOT use cached/old data. Get the LATEST real-time quotes. ALL prices in USD.
 Return JSON arrays. Each: [name, price_USD, change%, note]. note: sidecar/circuit only, else "".
 
 {"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
@@ -373,9 +375,9 @@ Return JSON arrays. Each: [name, price_USD, change%, note]. note: sidecar/circui
 "b":[["US10Y",0,0],["US2Y",0,0],["KR10Y",0,0],["VIX",0,0]],
 "cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}`;}
 
-function P2(){return `Date: ${todayISO()} ${nowKST()} KST. Prop desk. Web search REAL data.
-ALL prices in USD. Korean stock prices: divide KRW by USD/KRW rate. Net flow in $M (millions USD).
-Find TODAY's actual movers — NOT fixed. Biggest moves, volume spikes, breaking news.
+function P2(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. Prop desk. Search web for REAL-TIME data AS OF NOW.
+ALL prices in USD. Korean stocks: KRW÷USD/KRW. Flows in $M. Get LATEST quotes, not cached.
+Find RIGHT NOW's movers — biggest moves, volume spikes, breaking news at this moment.
 
 Return JSON:
 {"kr":[10 Korean stocks. Each:["name","ticker",price_USD,change%,"reason"]],
@@ -385,15 +387,16 @@ Return JSON:
 "sec_us":[11 US sectors(Tech,Healthcare,Finance,Energy,ConsDisc,ConsStap,Industrial,Materials,Utilities,RealEstate,Comm). Each:["name",chg%,"BUY/SELL/HOLD/WATCH",conf1-5,"reason","theme",[["stk1",chg%],["stk2",chg%],["stk3",chg%]]]],
 "sd":{"k":[["Foreign",net_$M],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]}}`;}
 
-function P3(){return `Date: ${todayISO()} ${nowKST()} KST. You are CIO of $1B+ hedge fund. Search web for REAL latest news.
-IMPORTANT: Find news from the LAST FEW HOURS, not morning. Include exact time.
+function P3(){return `CURRENT TIME: ${todayISO()} ${nowKST()} KST. You are CIO of $10B+ hedge fund. Search web RIGHT NOW for BREAKING news.
+CRITICAL: All data must reflect THIS EXACT MOMENT (${nowKST()} KST). Not morning, not hours ago. THE LATEST.
 
 Return JSON:
-{"n":[8 REAL news items from today, sorted by time DESC (newest first). Each: ["HH:MM","headline_Korean","HOT/WARN/TRADE/ECO","impact analysis for hedge fund trading desk"]],
-"sg":[6 actionable trade signals based on today's REAL market. Each: ["stock_name","LONG/SHORT/EXIT/WATCH","reason with entry logic",confidence_1to5,"target_price","stop_loss"]],
-"br":"5-6 sentences in Korean. Prop desk CIO briefing for ${todayISO()}. Must mention: 1)Market regime today vs yesterday 2)Leading/lagging sectors with specific names 3)Foreign/institutional flow direction+size 4)Key risk+tail risk scenario 5)Recommended position(long/short/neutral+sizing as % of AUM) 6)Remaining events today. Use HTML: <strong>,<span class=up>,<span class=dn>,<span class=acc>",
-"wk":"2-3 sentences Korean. This WEEK's market flow: change from Mon, weekly leading themes, global event impact. HTML tags OK.",
-"mo":"2-3 sentences Korean. This MONTH's trend: change from month start, sector rotation direction, macro trend. HTML tags OK.",
+{"n":[8 BREAKING news as of ${nowKST()} KST. Newest first. Each: ["HH:MM","headline_Korean","HOT/WARN/TRADE/ECO","impact for prop trading desk"]],
+"sg":[6 actionable signals based on RIGHT NOW market state. Each: ["stock_name","LONG/SHORT/EXIT/WATCH","entry logic",conf1-5,"target","stop_loss"]],
+"cal":[5 upcoming key economic/earnings events this week+next week. Each: ["date_MM/DD","time_HH:MM","event_Korean","expected_impact(high/medium/low)","forecast_value"]],
+"br":"5-6 sentences Korean. CIO briefing as of ${nowKST()} KST on ${todayISO()}. 1)Market regime RIGHT NOW vs yesterday 2)Leading/lagging sectors 3)Foreign/institutional flow 4)Key risk+tail risk 5)Position recommendation(long/short/neutral+%AUM) 6)Next events today. HTML: <strong>,<span class=up>,<span class=dn>,<span class=acc>",
+"wk":"3-4 sentences Korean. This WEEK review + NEXT WEEK forecast: 1)이번주 요약 2)다음주 주요 이벤트(FOMC,CPI등) 3)다음주 예상 방향+근거. HTML OK.",
+"mo":"3-4 sentences Korean. This MONTH review + NEXT MONTH forecast: 1)이번달 요약 2)다음달 매크로 이벤트 3)다음달 예상 섹터로테이션+방향. HTML OK.",
 "risk":{"vixLevel":"low/elevated/high/extreme","yieldCurve":"normal/flat/inverted","putCallRatio":0.0,"breadth":{"advDecl":"상승N/하락N","newHighLow":"신고가N/신저가N"},"sentiment":"extreme fear/fear/neutral/greed/extreme greed","keyRisk":"1-2 sentence key risk in Korean"},
 "macro_risks":[5 major macro/geopolitical risks. Each:["risk_name_Korean","probability_0to100_of_market_impact_this_month","impact_if_occurs(high/medium/low)","affected_sectors"]],
 "hedge":"2-3 sentences Korean. Position sizing(% AUM), VIX hedge, sector rotation, options strategy.",
@@ -480,6 +483,7 @@ function decodeInsight(r3){
   return{
     news:(r3.n||[]).map(r=>({time:r[0],title:r[1],badge:r[2],cat:bm[r[2]]||'nb-eco',impact:r[3]})),
     signals:(r3.sg||[]).map(r=>({ticker:r[0],action:r[1],reason:r[2],conf:r[3],target:r[4]||'',stop:r[5]||''})),
+    calendar:(r3.cal||[]).map(r=>({date:r[0],time:r[1],event:r[2],impact:r[3],forecast:r[4]||''})),
     brief:r3.br||'',
     weekly:r3.wk||'',
     monthly:r3.mo||'',
@@ -491,7 +495,7 @@ function decodeInsight(r3){
 }
 
 function showApp(){document.getElementById('loadingScreen').classList.add('hidden');['appHeader','appTicker','appTabs','appMain','appFooter','costBar'].forEach(id=>document.getElementById(id).style.display='');}
-function updTime(){const k=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));document.getElementById('headerDate').textContent=k.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'})+' AI LIVE';document.getElementById('briefUpdated').textContent='업데이트: '+k.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' KST';}
+function updTime(){const k=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));document.getElementById('headerDate').textContent=k.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'})+' AI LIVE';document.getElementById('briefUpdated').textContent='📡 실시간 업데이트: '+k.toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' '+k.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})+' KST';}
 
 // REFRESH
 async function doManualRefresh(){const b=document.getElementById('manualBtn'),s=document.getElementById('spinIcon');b.disabled=true;s.classList.add('spinning');try{await loadAllData(false);}finally{b.disabled=false;s.classList.remove('spinning');}}
@@ -552,6 +556,12 @@ function renderAll(d){
 
   renderHeatmap();
   document.getElementById('hmTime').textContent=nowKST()+' KST';
+
+  // Calendar
+  const calH=(d.calendar||[]).map(c=>{const imp={'high':'var(--dn)','medium':'var(--warn)','low':'var(--text3)'};return`<div class="drow flash"><div class="dr-nm" style="min-width:70px;font-weight:600">${c.date} ${c.time||''}</div><div style="flex:1;font-size:11px;color:var(--text);font-family:var(--sans)">${c.event}</div><div style="font-size:9px;color:${imp[c.impact]||'var(--text3)'};min-width:40px;text-align:right;font-weight:600">${(c.impact||'').toUpperCase()}</div>${c.forecast?'<div style="font-size:9px;color:var(--accent);min-width:50px;text-align:right">예상:'+c.forecast+'</div>':''}</div>`;}).join('');
+  document.getElementById('calPanel').innerHTML='<div class="dpanel-title">📅 주요 예정 발표 일정 (이번주+다음주)</div>'+calH;
+
+  document.getElementById('newsTime').textContent='as of '+nowKST()+' KST';
   document.getElementById('ovNews').innerHTML=newsH((d.news||[]).slice(0,5));
   document.getElementById('ovSignals').innerHTML=sigH((d.signals||[]).slice(0,6));
 
