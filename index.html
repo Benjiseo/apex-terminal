@@ -331,18 +331,22 @@ function showGateError(m){const e=document.getElementById('gateError');e.textCon
 const STEPS=['글로벌 지수·환율·원자재 스캔...','오늘의 주도주·급등락 종목 탐색...','뉴스·시그널·리스크 분석...','렌더링...'];
 function setStep(i){document.getElementById('lsStepText').textContent=STEPS[i]||'완료...';document.getElementById('lsProgress').style.width=Math.round((i/STEPS.length)*100)+'%';}
 
-async function callClaude(prompt,sys,maxTok,search=true){
-  const body={model:MODEL,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
-  if(search)body.tools=[{"type":"web_search_20250305","name":"web_search"}];
-  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error('API '+r.status);
-  const d=await r.json();
-  if(d.usage){totalCalls++;totalIn+=d.usage.input_tokens||0;totalOut+=d.usage.output_tokens||0;updCost();}
-  const t=d.content.filter(b=>b.type==='text').map(b=>b.text).join('');
-  const c=t.replace(/```json[\s\S]*?```/g,m=>m.slice(7,-3)).replace(/```[\s\S]*?```/g,m=>m.slice(3,-3)).trim();
-  const j=c.match(/\{[\s\S]*\}/);
-  if(!j)throw new Error('No JSON');
-  return JSON.parse(j[0]);
+async function callClaude(prompt,sys,maxTok,search=true,retries=2){
+  for(let attempt=0;attempt<=retries;attempt++){
+    try{
+      const body={model:MODEL,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
+      if(search)body.tools=[{"type":"web_search_20250305","name":"web_search"}];
+      const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
+      if(!r.ok){const e=await r.text();if(attempt<retries){await new Promise(w=>setTimeout(w,2000));continue;}throw new Error('API '+r.status+': '+e.slice(0,80));}
+      const d=await r.json();
+      if(d.usage){totalCalls++;totalIn+=d.usage.input_tokens||0;totalOut+=d.usage.output_tokens||0;updCost();}
+      const t=d.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+      const c=t.replace(/```json[\s\S]*?```/g,m=>m.slice(7,-3)).replace(/```[\s\S]*?```/g,m=>m.slice(3,-3)).trim();
+      const j=c.match(/\{[\s\S]*\}/);
+      if(!j){if(attempt<retries){console.warn('No JSON attempt '+attempt+', retrying...');continue;}throw new Error('No JSON in response');}
+      return JSON.parse(j[0]);
+    }catch(e){if(attempt>=retries)throw e;console.warn('Retry '+attempt+':',e.message);await new Promise(w=>setTimeout(w,1500));}
+  }
 }
 function updCost(){document.getElementById('costCalls').textContent=totalCalls;document.getElementById('costIn').textContent=totalIn.toLocaleString();document.getElementById('costOut').textContent=totalOut.toLocaleString();document.getElementById('costUsd').textContent='$'+((totalIn*3+totalOut*15)/1e6).toFixed(4);}
 
@@ -350,53 +354,56 @@ function today(){const d=new Date();return d.toLocaleDateString('ko-KR',{timeZon
 function todayISO(){return new Date().toISOString().split('T')[0];}
 function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});}
 
-const SYS='JSON만 반환. 마크다운/설명 금지. 반드시 웹검색으로 오늘 실제 데이터 수집. 추측 금지.';
+const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks. Use web search to get today\'s REAL market data. Never guess.';
 
-// CALL 1: Market numbers (indices, fx, commodities, bonds, crypto)
-function P1(){return `${today()} ${nowKST()} KST 기준. 웹검색 필수.
-모든 값은 현재 실제 시세. 각 배열: [이름,현재가,등락률%,특이사항]
+function P1(){return `Date: ${todayISO()} ${nowKST()} KST. Search web for REAL current prices.
+Return JSON with arrays. Each item: [name, price, change%, note].
+note: only for sidecar/circuit breaker, else empty string "".
 
-{"i":[KOSPI,KOSDAQ,S&P500,NASDAQ,DOW,Russell2000,닛케이,항셍,상해종합,DAX,FTSE100,ASX200 순서로 12개],
-"f":[USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW,EUR/USD,USD/JPY,GBP/USD,DXY 순서로 8개],
-"c":[WTI,브렌트,천연가스,금,은,구리,밀,철광석 순서로 8개. 단위포함],
-"b":[미10년물,미2년물,한국10년물,VIX,하이일드스프레드 순서. 금리는 yield%],
-"cr":[BTC,ETH,SOL,XRP,BNB 순서. USD가격]
-}`;}
+{"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
+"f":[["USD/KRW",0,0],["JPY/KRW",0,0],["EUR/KRW",0,0],["CNY/KRW",0,0],["EUR/USD",0,0],["USD/JPY",0,0],["GBP/USD",0,0],["DXY",0,0]],
+"c":[["WTI",0,0,"$/bbl"],["Brent",0,0,"$/bbl"],["NatGas",0,0,"$/MMBtu"],["Gold",0,0,"$/oz"],["Silver",0,0,"$/oz"],["Copper",0,0,"$/lb"],["Wheat",0,0,"$/bu"],["IronOre",0,0,"$/t"]],
+"b":[["US10Y",0,0],["US2Y",0,0],["KR10Y",0,0],["VIX",0,0]],
+"cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}`;}
 
-// CALL 2: Dynamic stocks + sectors (NO fixed list!)
-function P2(){return `${today()} ${nowKST()} KST. 웹검색 필수. 프랍 트레이더 데스크 관점.
-고정 목록 아님. 오늘 실제 급등/급락/거래량폭증/뉴스발생 종목만.
+function P2(){return `Date: ${todayISO()} ${nowKST()} KST. Prop trading desk view. Search web for REAL data.
+Find TODAY's actual market movers — NOT a fixed list. Find stocks with biggest moves, volume spikes, or breaking news.
 
-{"kr":[한국 시총상위+오늘주도주 10개. 각:[이름,티커,현재가(원),등락률%,사유한줄]],
-"us":[미국 Mag7+오늘핫종목 10개. 각:[이름,티커,현재가($),등락률%,사유한줄]],
-"gl":[아시아+유럽 핵심 8개. 각:[이름,티커,현재가,등락률%,사유한줄]],
-"sec":[한국 주요 12섹터. 각:[섹터명,등락률%,시그널(BUY/SELL/HOLD/WATCH),신뢰도1-5,근거한줄,테마키워드,[해당섹터 오늘 등락 상위3종목 각:[종목명,등락률%]]]],
-"sd":{"k":[KOSPI 외국인/기관/연기금/개인. 각:[주체,순매수억원]],"q":[KOSDAQ 동일]}
-}`;}
+Return JSON:
+{"kr":[10 Korean stocks (large cap + today's movers). Each: ["name","ticker",price_KRW,change%,"reason"]],
+"us":[10 US stocks (Mag7 + today's movers). Each: ["name","ticker",price_USD,change%,"reason"]],
+"gl":[8 Asia+Europe stocks. Each: ["name","ticker",price,change%,"reason"]],
+"sec":[12 Korean sectors. Each: ["sector_name",change%,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme_keyword",[["stock1",chg%],["stock2",chg%],["stock3",chg%]]]],
+"sd":{"k":[["Foreign",net_billion_KRW],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]}}`;}
 
-// CALL 3: News + Signals + Briefing + Risk (all dynamic, every refresh)
-function P3(){return `${today()} ${nowKST()} KST. 웹검색 필수. 1조원+ 운용 헤지펀드 CIO 관점.
+function P3(){return `Date: ${todayISO()} ${nowKST()} KST. You are CIO of $1B+ hedge fund. Search web for REAL latest news.
+IMPORTANT: Find news from the LAST FEW HOURS, not morning. Include exact time.
 
-{"n":[오늘 실제 뉴스 8건. 시간순. 각:[시각HH:MM,제목,카테고리(HOT/WARN/TRADE/ECO),헤지펀드 영향도 분석]],
-"sg":[오늘 실제 시장 기반 트레이드 시그널 6건. 각:[종목명,액션(LONG/SHORT/EXIT/WATCH),근거,신뢰도1-5,목표가,손절가]],
-"br":"CIO 브리핑 5-6문장. 프랍 트레이더 데스크장 관점. 반드시 오늘 날짜 언급. 1)장 분위기+전일대비 변화 2)주도섹터와 약세섹터 3)외국인/기관 수급+프로그램매매 방향 4)핵심 리스크+블랙스완 시나리오 5)권장 포지션(롱/숏/뉴트럴+비중%)+포지션사이즈 6)오늘 잔여 이벤트. HTML태그:<strong>,<span class=up>,<span class=dn>,<span class=acc>",
-"wk":"이번 주 시장 흐름 2-3문장. 주초대비 변화, 주간 주도테마, 글로벌 이벤트 영향. HTML태그 사용가능.",
-"mo":"이번 달 시장 흐름 2-3문장. 월초대비 변화, 섹터 로테이션 방향, 매크로 트렌드. HTML태그 사용가능.",
-"risk":{"vixLevel":"","yieldCurve":"","putCallRatio":0,"breadth":{"advDecl":"","newHighLow":""},"sentiment":"","keyRisk":""},
-"hedge":"헤지 권고 2-3문장. 포지션사이즈(AUM대비 %), VIX헤지, 섹터로테이션, 옵션전략 등."
-}`;}
+Return JSON:
+{"n":[8 REAL news items from today, sorted by time DESC (newest first). Each: ["HH:MM","headline_Korean","HOT/WARN/TRADE/ECO","impact analysis for hedge fund trading desk"]],
+"sg":[6 actionable trade signals based on today's REAL market. Each: ["stock_name","LONG/SHORT/EXIT/WATCH","reason with entry logic",confidence_1to5,"target_price","stop_loss"]],
+"br":"5-6 sentences in Korean. Prop desk CIO briefing for ${todayISO()}. Must mention: 1)Market regime today vs yesterday 2)Leading/lagging sectors with specific names 3)Foreign/institutional flow direction+size 4)Key risk+tail risk scenario 5)Recommended position(long/short/neutral+sizing as % of AUM) 6)Remaining events today. Use HTML: <strong>,<span class=up>,<span class=dn>,<span class=acc>",
+"wk":"2-3 sentences Korean. This WEEK's market flow: change from Mon, weekly leading themes, global event impact. HTML tags OK.",
+"mo":"2-3 sentences Korean. This MONTH's trend: change from month start, sector rotation direction, macro trend. HTML tags OK.",
+"risk":{"vixLevel":"low/elevated/high/extreme","yieldCurve":"normal/flat/inverted","putCallRatio":0.0,"breadth":{"advDecl":"상승N/하락N","newHighLow":"신고가N/신저가N"},"sentiment":"extreme fear/fear/neutral/greed/extreme greed","keyRisk":"1-2 sentence key risk in Korean"},
+"hedge":"2-3 sentences Korean. Hedge recommendation: position sizing(% of AUM), VIX hedge, sector rotation, options strategy."}`;}
+
+
+async function safeFetch(fn,label){try{return await fn();}catch(e){console.error(label+' failed:',e);return null;}}
 
 async function loadAllData(first=false){
   if(first){document.getElementById('loadingScreen').classList.remove('hidden');setStep(0);}
   else{document.getElementById('refreshOverlay').classList.add('show');document.getElementById('refreshOverlayText').textContent='전체 스캔 중...';}
   try{
+    if(first)setStep(0);
     const [r1,r2,r3]=await Promise.all([
-      (first&&setStep(0),callClaude(P1(),SYS,1800,true)),
-      (first&&setStep(1),callClaude(P2(),SYS,2000,true)),
-      (first&&setStep(2),callClaude(P3(),SYS,2500,true))
+      safeFetch(()=>callClaude(P1(),SYS,4000,true),'P1-numbers'),
+      safeFetch(()=>callClaude(P2(),SYS,4000,true),'P2-stocks'),
+      safeFetch(()=>callClaude(P3(),SYS,4000,true),'P3-insight')
     ]);
     if(first)setStep(3);
-    D=mergeData(r1,r2,r3);
+    if(!r1&&!r2&&!r3)throw new Error('All 3 API calls failed');
+    D=mergeData(r1||{},r2||{},r3||{});
     renderAll(D);
     if(first){await new Promise(r=>setTimeout(r,200));showApp();}
     updTime();
@@ -410,7 +417,7 @@ async function loadInsightOnly(){
   document.getElementById('refreshOverlay').classList.add('show');
   document.getElementById('refreshOverlayText').textContent='뉴스·시그널 갱신 중...';
   try{
-    const r3=await callClaude(P3(),SYS,2500,true);
+    const r3=await callClaude(P3(),SYS,4000,true);
     if(D){
       const ins=decodeInsight(r3);
       const old=new Set((D.news||[]).map(n=>n.title));
