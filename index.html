@@ -235,10 +235,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="clock" id="clock">--:--:--</div>
     <div class="ref-ctrl">
       <button class="ref-btn" id="manualBtn" onclick="doManualRefresh()"><span class="spinning-wrap" id="spinIcon">⟳</span> REFRESH</button>
-      <select class="ref-sel" id="autoInterval"><option value="0">수동</option><option value="30">30초</option><option value="60">1분</option><option value="180" selected>3분</option><option value="300">5분</option></select>
-      <select class="ref-sel" id="autoLimit"><option value="0">무제한</option><option value="5">5회</option><option value="10" selected>10회</option><option value="20">20회</option></select>
+      <select class="ref-sel" id="autoInterval"><option value="60">1분</option><option value="180" selected>3분</option><option value="300">5분</option><option value="600">10분</option></select>
+      <select class="ref-sel" id="autoLimit"><option value="5">5회</option><option value="10" selected>10회</option><option value="20">20회</option><option value="0">무제한</option></select>
       <button class="ref-btn" id="autoBtn" onclick="toggleAuto()">AUTO</button>
-      <div class="ref-status" id="refStatus">—</div>
+      <div class="ref-status" id="refStatus">수동모드</div>
     </div>
     <button class="settings-btn" title="API Key 변경" onclick="changeKey()">⚙</button>
   </div>
@@ -254,6 +254,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
   <div class="tab" data-tab="crypto">₿ 가상자산</div>
   <div class="tab" data-tab="sectors">🔬 섹터·테마</div>
   <div class="tab" data-tab="flow">📦 수급·자금흐름</div>
+  <div class="tab" data-tab="smart">💰 Smart Money</div>
   <div class="tab" data-tab="risk">⚠ 리스크</div>
   <div class="tab" data-tab="news">📡 속보·시그널</div>
 </div>
@@ -263,7 +264,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="data2"><div class="brief-bar" style="border-color:rgba(99,132,255,.15)"><div class="brief-icon">📅</div><div class="brief-body"><div class="brief-title">WEEKLY OUTLOOK</div><div class="brief-text" id="weeklyText">—</div></div></div><div class="brief-bar" style="border-color:rgba(255,195,0,.15)"><div class="brief-icon">📊</div><div class="brief-body"><div class="brief-title">MONTHLY TREND</div><div class="brief-text" id="monthlyText">—</div></div></div></div>
     <div><div class="sec-label">글로벌 주요 지수</div><div class="idx-grid" id="ovIndices"></div></div>
     <div><div class="sec-label">환율 · 원자재 · 가상자산</div><div class="data3" id="ovMacro"></div></div>
-    <div><div class="sec-label">섹터 히트맵</div><div class="heatmap" id="ovHeatmap"></div></div>
+    <div><div class="sec-label">섹터 히트맵 <select class="ref-sel" id="hmMarket" onchange="renderHeatmap()" style="margin-left:8px"><option value="kr">🇰🇷 한국</option><option value="us">🇺🇸 미국</option><option value="gl">🌏 글로벌</option></select> <span id="hmTime" style="font-size:9px;color:var(--text3);margin-left:6px"></span></div><div class="heatmap" id="ovHeatmap"></div></div>
     <div><div class="sec-label">속보 · 시그널</div><div class="news-sig"><div class="news-panel"><div class="panel-hd">⚡ BREAKING NEWS</div><div id="ovNews"></div></div><div class="sig-panel"><div class="panel-hd">🎯 TRADE SIGNALS</div><div id="ovSignals"></div></div></div></div>
   </div>
   <div class="page" id="page-korea">
@@ -299,6 +300,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="data2"><div><div class="sec-label">KOSPI 수급</div><div class="dpanel" id="supKospi"></div></div><div><div class="sec-label">KOSDAQ 수급</div><div class="dpanel" id="supKosdaq"></div></div></div>
     <div id="supChips" class="flow-chips"></div>
     <div><div class="sec-label">시장 브레드쓰·센티먼트</div><div class="dpanel" id="breadth"></div></div>
+  </div>
+  <div class="page" id="page-smart">
+    <div class="brief-bar" style="border-color:rgba(255,195,0,.2)"><div class="brief-icon">💰</div><div class="brief-body"><div class="brief-title">SMART MONEY FLOW — 글로벌 자금 로테이션</div><div class="brief-text" id="smartBrief">로딩 중...</div></div></div>
+    <div><div class="sec-label">자산군별 자금 흐름 (USD 기준)</div><div class="dpanel" id="smartFlow"></div></div>
+    <div><div class="sec-label">국가별 주식시장 자금 흐름</div><div class="dpanel" id="smartCountry"></div></div>
+    <div><div class="sec-label">추천 마켓 포커스</div><div class="dpanel" id="smartRec"></div></div>
   </div>
   <div class="page" id="page-risk">
     <div><div class="sec-label">리스크 대시보드</div><div class="dpanel" id="riskDash"></div></div>
@@ -357,8 +364,8 @@ function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'A
 const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks. Use web search to get today\'s REAL market data. Never guess.';
 
 function P1(){return `Date: ${todayISO()} ${nowKST()} KST. Search web for REAL current prices.
-Return JSON with arrays. Each item: [name, price, change%, note].
-note: only for sidecar/circuit breaker, else empty string "".
+ALL prices in USD. Korean stocks in USD equivalent (divide KRW price by current USD/KRW rate). All trading volumes in USD.
+Return JSON arrays. Each: [name, price_USD, change%, note]. note: sidecar/circuit only, else "".
 
 {"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
 "f":[["USD/KRW",0,0],["JPY/KRW",0,0],["EUR/KRW",0,0],["CNY/KRW",0,0],["EUR/USD",0,0],["USD/JPY",0,0],["GBP/USD",0,0],["DXY",0,0]],
@@ -366,15 +373,17 @@ note: only for sidecar/circuit breaker, else empty string "".
 "b":[["US10Y",0,0],["US2Y",0,0],["KR10Y",0,0],["VIX",0,0]],
 "cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}`;}
 
-function P2(){return `Date: ${todayISO()} ${nowKST()} KST. Prop trading desk view. Search web for REAL data.
-Find TODAY's actual market movers — NOT a fixed list. Find stocks with biggest moves, volume spikes, or breaking news.
+function P2(){return `Date: ${todayISO()} ${nowKST()} KST. Prop desk. Web search REAL data.
+ALL prices in USD. Korean stock prices: divide KRW by USD/KRW rate. Net flow in $M (millions USD).
+Find TODAY's actual movers — NOT fixed. Biggest moves, volume spikes, breaking news.
 
 Return JSON:
-{"kr":[10 Korean stocks (large cap + today's movers). Each: ["name","ticker",price_KRW,change%,"reason"]],
-"us":[10 US stocks (Mag7 + today's movers). Each: ["name","ticker",price_USD,change%,"reason"]],
-"gl":[8 Asia+Europe stocks. Each: ["name","ticker",price,change%,"reason"]],
-"sec":[12 Korean sectors. Each: ["sector_name",change%,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme_keyword",[["stock1",chg%],["stock2",chg%],["stock3",chg%]]]],
-"sd":{"k":[["Foreign",net_billion_KRW],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]}}`;}
+{"kr":[10 Korean stocks. Each:["name","ticker",price_USD,change%,"reason"]],
+"us":[10 US stocks. Each:["name","ticker",price_USD,change%,"reason"]],
+"gl":[8 Asia+Europe. Each:["name","ticker",price_USD,change%,"reason"]],
+"sec_kr":[12 Korean sectors. Each:["name",chg%,"BUY/SELL/HOLD/WATCH",conf1-5,"reason","theme",[["stk1",chg%],["stk2",chg%],["stk3",chg%]]]],
+"sec_us":[11 US sectors(Tech,Healthcare,Finance,Energy,ConsDisc,ConsStap,Industrial,Materials,Utilities,RealEstate,Comm). Each:["name",chg%,"BUY/SELL/HOLD/WATCH",conf1-5,"reason","theme",[["stk1",chg%],["stk2",chg%],["stk3",chg%]]]],
+"sd":{"k":[["Foreign",net_$M],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]}}`;}
 
 function P3(){return `Date: ${todayISO()} ${nowKST()} KST. You are CIO of $1B+ hedge fund. Search web for REAL latest news.
 IMPORTANT: Find news from the LAST FEW HOURS, not morning. Include exact time.
@@ -386,7 +395,13 @@ Return JSON:
 "wk":"2-3 sentences Korean. This WEEK's market flow: change from Mon, weekly leading themes, global event impact. HTML tags OK.",
 "mo":"2-3 sentences Korean. This MONTH's trend: change from month start, sector rotation direction, macro trend. HTML tags OK.",
 "risk":{"vixLevel":"low/elevated/high/extreme","yieldCurve":"normal/flat/inverted","putCallRatio":0.0,"breadth":{"advDecl":"상승N/하락N","newHighLow":"신고가N/신저가N"},"sentiment":"extreme fear/fear/neutral/greed/extreme greed","keyRisk":"1-2 sentence key risk in Korean"},
-"hedge":"2-3 sentences Korean. Hedge recommendation: position sizing(% of AUM), VIX hedge, sector rotation, options strategy."}`;}
+"macro_risks":[5 major macro/geopolitical risks. Each:["risk_name_Korean","probability_0to100_of_market_impact_this_month","impact_if_occurs(high/medium/low)","affected_sectors"]],
+"hedge":"2-3 sentences Korean. Position sizing(% AUM), VIX hedge, sector rotation, options strategy.",
+"smart":{"brief":"Smart Money 자금흐름 분석 3-4문장. 글로벌 자금이 현재 어디로 이동 중인지. 주식→채권? 선진국→신흥국? 성장→가치? 원자재→가상자산? HTML태그 사용.",
+"flows":[["US Equities","inflow/outflow",flow_$B_weekly,"trend"],["EU Equities","",0,""],["EM Equities","",0,""],["Japan Equities","",0,""],["Korea Equities","",0,""],["China Equities","",0,""],["US Bonds","",0,""],["Gold","",0,""],["Crypto","",0,""],["Commodities","",0,""]],
+"country_rank":[5 countries ranked by smart money inflow. Each:["country",net_flow_$B,"reason"]],
+"rec":"추천 마켓 포커스 2-3문장. 어디에 자금 비중을 높여야 하는지, 어디서 빼야 하는지. AUM 배분 비율 제안. HTML태그 사용."}
+}`;}
 
 
 async function safeFetch(fn,label){try{return await fn();}catch(e){console.error(label+' failed:',e);return null;}}
@@ -450,7 +465,9 @@ function mergeData(r1,r2,r3){
   d.us_stocks=(r2.us||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   d.gl_stocks=(r2.gl||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   // Sectors
-  d.sectors=(r2.sec||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
+  d.sectors_kr=(r2.sec_kr||r2.sec||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
+  d.sectors_us=(r2.sec_us||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
+  d.sectors=d.sectors_kr;
   // Supply
   d.supply={kospi:(r2.sd&&r2.sd.k||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])})),kosdaq:(r2.sd&&r2.sd.q||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])}))};
   // Insight
@@ -467,7 +484,9 @@ function decodeInsight(r3){
     weekly:r3.wk||'',
     monthly:r3.mo||'',
     risk:r3.risk||{},
-    hedge:r3.hedge||''
+    macro_risks:(r3.macro_risks||[]).map(r=>({name:r[0],prob:r[1],impact:r[2],sectors:r[3]})),
+    hedge:r3.hedge||'',
+    smart:r3.smart||{}
   };
 }
 
@@ -485,7 +504,7 @@ function stopAuto(){autoRunning=false;if(autoTimer){clearInterval(autoTimer);aut
 function fmt(n,d=0){if(n==null||isNaN(n))return'—';return Number(n).toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});}
 function sign(n){return n>0?'+':'';}
 function cls(n){return n>0?'up':n<0?'dn':'flat';}
-function fmtB(n){const a=Math.abs(n);if(a>=100000)return(n/100000).toFixed(1)+'조';if(a>=10000)return(n/10000).toFixed(1)+'억';return n.toLocaleString()+'억';}
+function fmtB(n){const a=Math.abs(n);if(a>=1000)return'$'+(n/1000).toFixed(1)+'B';return'$'+fmt(n,1)+'M';}
 function heatColor(v){const c=Math.max(-5,Math.min(5,v||0));if(c>=3)return'#003020';if(c>=1.5)return'#005228';if(c>=0.4)return'#006b30';if(c>=0)return'#002e15';if(c>=-0.4)return'#3a0010';if(c>=-1.5)return'#6b001e';if(c>=-3)return'#9e0028';return'#d00038';}
 function decF(v){v=Math.abs(v||0);if(v>=10000)return 0;if(v>=100)return 1;if(v>=1)return 2;return 3;}
 
@@ -495,7 +514,7 @@ function dpRows(items,vFn){return items.map(i=>`<div class="drow flash"><div cla
 
 function heatmapH(sec){return(sec||[]).map(s=>`<div class="hm-cell" style="background:${heatColor(s.chg)}" title="${s.name}: ${sign(s.chg||0)}${fmt(s.chg,2)}%"><div class="hm-nm">${s.name}</div><div class="hm-val">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div>`).join('');}
 
-function stockC(s,suf=''){const d=decF(s.val);return`<div class="stock-card flash"><div class="stock-nm">${s.name}</div><div class="stock-tkr">${s.ticker}${s.reason?' · '+s.reason:''}</div><div class="stock-val">${fmt(s.val,d)}${suf}</div><div class="stock-chg ${cls(s.chg)}">${sign(s.chg)}${fmt(s.chg,2)}%</div></div>`;}
+function stockC(s){const d=decF(s.val);return`<div class="stock-card flash"><div class="stock-nm">${s.name}</div><div class="stock-tkr">${s.ticker}${s.reason?' · '+s.reason:''}</div><div class="stock-val">$${fmt(s.val,d)}</div><div class="stock-chg ${cls(s.chg)}">${sign(s.chg)}${fmt(s.chg,2)}%</div></div>`;}
 
 function newsH(arr){return(arr||[]).map(n=>`<div class="news-item"><div class="news-meta">${n.isNew?'<span class="new-badge">NEW</span>':''}<span class="nbadge ${n.cat||'nb-eco'}">${n.badge||'NEWS'}</span><span class="news-time">${n.time||'—'}</span></div><div class="news-title">${n.title||''}</div><div class="news-impact">▸ ${n.impact||''}</div></div>`).join('');}
 
@@ -531,20 +550,21 @@ function renderAll(d){
     `<div class="dpanel flash"><div class="dpanel-title">COMMODITIES</div>${dpRows(coV,i=>fmt(i.val,decF(i.val))+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''))}</div>`+
     `<div class="dpanel flash"><div class="dpanel-title">CRYPTO</div>${dpRows(crV,i=>'$'+fmt(i.val,decF(i.val)))}</div>`;
 
-  document.getElementById('ovHeatmap').innerHTML=heatmapH(d.sectors);
+  renderHeatmap();
+  document.getElementById('hmTime').textContent=nowKST()+' KST';
   document.getElementById('ovNews').innerHTML=newsH((d.news||[]).slice(0,5));
   document.getElementById('ovSignals').innerHTML=sigH((d.signals||[]).slice(0,6));
 
   // Korea
   document.getElementById('krIndices').innerHTML=[d.indices?.kospi,d.indices?.kosdaq].filter(Boolean).map(idxCard).join('');
-  document.getElementById('krSD1').innerHTML='<div class="dpanel-title">KOSPI 수급 (억원)</div>'+sdH(d.supply?.kospi);
-  document.getElementById('krSD2').innerHTML='<div class="dpanel-title">KOSDAQ 수급 (억원)</div>'+sdH(d.supply?.kosdaq);
-  document.getElementById('krStocks').innerHTML=(d.kr_stocks||[]).map(s=>stockC(s,'원')).join('');
+  document.getElementById('krSD1').innerHTML='<div class="dpanel-title">KOSPI 수급 ($M)</div>'+sdH(d.supply?.kospi);
+  document.getElementById('krSD2').innerHTML='<div class="dpanel-title">KOSDAQ 수급 ($M)</div>'+sdH(d.supply?.kosdaq);
+  document.getElementById('krStocks').innerHTML=(d.kr_stocks||[]).map(s=>stockC(s,'')).join('');
 
   // US
   document.getElementById('usIndices').innerHTML=[d.indices?.sp500,d.indices?.nasdaq,d.indices?.dow,d.indices?.russell].filter(Boolean).map(idxCard).join('');
   document.getElementById('usStocks').innerHTML=(d.us_stocks||[]).map(s=>stockC(s,'')).join('');
-  const bRows=Object.values(d.bonds||{}).map(b=>`<div class="drow"><div class="dr-nm">${b.name}</div><div class="dr-val">${fmt(b.val,3)}${b.name.includes('VIX')||b.name.includes('스프레드')?'':'%'}</div><div class="dr-chg ${cls(b.chg)}">${sign(b.chg)}${fmt(b.chg,3)}</div></div>`).join('');
+  const bRows=Object.values(d.bonds||{}).map(b=>`<div class="drow"><div class="dr-nm">${b.name}</div><div class="dr-val">${fmt(b.val,3)}${b.name.includes('VIX')?'':'%'}</div><div class="dr-chg ${cls(b.chg)}">${sign(b.chg)}${fmt(b.chg,3)}</div></div>`).join('');
   document.getElementById('usBonds').innerHTML='<div class="dpanel-title">채권 · 금리 · VIX</div>'+bRows;
 
   // Global
@@ -561,46 +581,68 @@ function renderAll(d){
   const en=[d.commodities?.wti,d.commodities?.brent,d.commodities?.ng].filter(Boolean);
   const mt=[d.commodities?.gold,d.commodities?.silver,d.commodities?.copper].filter(Boolean);
   const ag=[d.commodities?.wheat,d.commodities?.iron].filter(Boolean);
-  document.getElementById('comEnergy').innerHTML='<div class="dpanel-title">에너지</div>'+dpRows(en,i=>fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
-  document.getElementById('comMetals').innerHTML='<div class="dpanel-title">귀금속 · 금속</div>'+dpRows(mt,i=>fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
-  document.getElementById('comAgri').innerHTML='<div class="dpanel-title">농산물</div>'+dpRows(ag,i=>fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
+  document.getElementById('comEnergy').innerHTML='<div class="dpanel-title">에너지 (USD)</div>'+dpRows(en,i=>'$'+fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
+  document.getElementById('comMetals').innerHTML='<div class="dpanel-title">귀금속 · 금속 (USD)</div>'+dpRows(mt,i=>'$'+fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
+  document.getElementById('comAgri').innerHTML='<div class="dpanel-title">농산물 (USD)</div>'+dpRows(ag,i=>'$'+fmt(i.val,2)+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''));
 
   // Crypto
   document.getElementById('cryptoGrid').innerHTML=crV.map(i=>`<div class="idx-card ${(i.chg||0)>=0?'up-card':'dn-card'} flash"><div class="idx-nm">${i.name}</div><div class="idx-val">$${fmt(i.val,decF(i.val))}</div><div class="idx-row"><div class="idx-chg ${cls(i.chg)}">${sign(i.chg)}${fmt(i.chg,2)}%</div></div></div>`).join('');
   const usdkrw=(d.fx?.usdkrw?.val)||1400,btcV=(d.crypto?.BTC?.val||Object.values(d.crypto||{})[0]?.val)||0;
-  document.getElementById('cryptoKimchi').innerHTML='<div class="dpanel-title">김치프리미엄</div><div class="drow"><div class="dr-nm">BTC (원화)</div><div class="dr-val">'+fmt(btcV*usdkrw,0)+'원</div></div>';
+  document.getElementById('cryptoKimchi').innerHTML='<div class="dpanel-title">김치프리미엄</div><div class="drow"><div class="dr-nm">BTC (KRW)</div><div class="dr-val">₩'+fmt(btcV*usdkrw,0)+'</div></div>';
   document.getElementById('cryptoFear').innerHTML='<div class="dpanel-title">공포탐욕·도미넌스</div>'+(vix?'<div class="drow"><div class="dr-nm">VIX</div><div class="dr-val '+cls(vix.chg)+'">'+fmt(vix.val,2)+'</div></div>':'');
 
-  // Sectors
-  document.getElementById('secHeatmap').innerHTML=heatmapH(d.sectors);
+  // Sectors page
+  document.getElementById('secHeatmap').innerHTML=heatmapH(d.sectors_kr);
   const sm={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'};
-  document.getElementById('secDetail').innerHTML=(d.sectors||[]).map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div>${tops?'<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'+tops+'</div>':''}</div>`;}).join('');
+  const allSec=[...(d.sectors_kr||[]),...(d.sectors_us||[])];
+  document.getElementById('secDetail').innerHTML=allSec.map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div>${tops?'<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'+tops+'</div>':''}</div>`;}).join('');
 
   // Flow
-  document.getElementById('supKospi').innerHTML='<div class="dpanel-title">KOSPI 수급 (억원)</div>'+sdH(d.supply?.kospi);
-  document.getElementById('supKosdaq').innerHTML='<div class="dpanel-title">KOSDAQ 수급 (억원)</div>'+sdH(d.supply?.kosdaq);
-  const kpF=d.supply?.kospi?.find(x=>x.who==='외국인'),kpI=d.supply?.kospi?.find(x=>x.who==='개인');
-  document.getElementById('supChips').innerHTML=[kpF,kpI].filter(Boolean).map(x=>`<div class="chip ${(x.net||0)>=0?'chip-buy':'chip-sell'}">${(x.net||0)>=0?'▲':'▼'} ${x.who} ${sign(x.net||0)}${fmtB(x.net||0)}</div>`).join('');
+  document.getElementById('supKospi').innerHTML='<div class="dpanel-title">KOSPI 수급 ($M)</div>'+sdH(d.supply?.kospi);
+  document.getElementById('supKosdaq').innerHTML='<div class="dpanel-title">KOSDAQ 수급 ($M)</div>'+sdH(d.supply?.kosdaq);
+  const kpF=d.supply?.kospi?.find(x=>x.who==='Foreign'||x.who==='외국인'),kpI=d.supply?.kospi?.find(x=>x.who==='Retail'||x.who==='개인');
+  document.getElementById('supChips').innerHTML=[kpF,kpI].filter(Boolean).map(x=>`<div class="chip ${(x.net||0)>=0?'chip-buy':'chip-sell'}">${(x.net||0)>=0?'▲':'▼'} ${x.who} ${sign(x.net||0)}$${fmt(Math.abs(x.net||0),1)}M</div>`).join('');
 
   // Breadth
-  const rsk=d.risk||{};
-  const br=rsk.breadth||{};
+  const rsk=d.risk||{};const br=rsk.breadth||{};
   document.getElementById('breadth').innerHTML='<div class="dpanel-title">시장 브레드쓰·센티먼트</div>'+
     `<div class="drow"><div class="dr-nm">상승/하락 종목수</div><div class="dr-val">${br.advDecl||'—'}</div></div>`+
     `<div class="drow"><div class="dr-nm">52주 신고가/신저가</div><div class="dr-val">${br.newHighLow||'—'}</div></div>`+
     `<div class="drow"><div class="dr-nm">풋콜비율</div><div class="dr-val">${rsk.putCallRatio||'—'}</div></div>`+
     `<div class="drow"><div class="dr-nm">센티먼트</div><div class="dr-val">${rsk.sentiment||'—'}</div></div>`;
 
-  // Risk
+  // Smart Money
+  const smt=d.smart||{};
+  document.getElementById('smartBrief').innerHTML=smt.brief||'—';
+  const flows=(smt.flows||[]);
+  document.getElementById('smartFlow').innerHTML='<div class="dpanel-title">자산군별 자금 흐름 (주간, $B)</div>'+flows.map(f=>{const dir=f[1];const amt=f[2]||0;const isIn=dir==='inflow';return`<div class="drow flash"><div class="dr-nm">${f[0]}</div><div class="dr-val ${isIn?'up':'dn'}">${isIn?'▲ Inflow':'▼ Outflow'} $${fmt(Math.abs(amt),1)}B</div><div style="font-size:9px;color:var(--text3)">${f[3]||''}</div></div>`;}).join('');
+  const crank=(smt.country_rank||[]);
+  document.getElementById('smartCountry').innerHTML='<div class="dpanel-title">국가별 Smart Money 유입 순위 ($B)</div>'+crank.map((c,i)=>`<div class="drow flash"><div class="dr-nm" style="font-weight:600">#${i+1} ${c[0]}</div><div class="dr-val ${(c[1]||0)>=0?'up':'dn'}">${sign(c[1]||0)}$${fmt(Math.abs(c[1]||0),1)}B</div><div style="font-size:9px;color:var(--text3);max-width:200px;text-align:right">${c[2]||''}</div></div>`).join('');
+  document.getElementById('smartRec').innerHTML='<div class="dpanel-title">추천 마켓 포커스</div><div style="font-size:11px;color:var(--text2);line-height:1.6;font-family:var(--sans);padding:4px 0">'+(smt.rec||'—')+'</div>';
+
+  // Risk + Macro risks
+  const macroR=(d.macro_risks||[]);
   document.getElementById('riskDash').innerHTML='<div class="dpanel-title">리스크 대시보드</div>'+
     `<div class="drow"><div class="dr-nm">VIX 수준</div><div class="dr-val">${rsk.vixLevel||'—'}</div></div>`+
     `<div class="drow"><div class="dr-nm">수익률 곡선</div><div class="dr-val">${rsk.yieldCurve||'—'}</div></div>`+
-    `<div class="drow"><div class="dr-nm">핵심 리스크</div><div class="dr-val" style="font-size:10px;max-width:300px;text-align:right">${rsk.keyRisk||'—'}</div></div>`;
+    `<div class="drow"><div class="dr-nm">핵심 리스크</div><div class="dr-val" style="font-size:10px;max-width:300px;text-align:right">${rsk.keyRisk||'—'}</div></div>`+
+    (macroR.length?'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)"><div class="dpanel-title">거시 리스크 확률 (이번 달 주가 영향)</div>'+macroR.map(r=>{const pct=r.prob||0;const col=pct>=60?'var(--dn)':pct>=30?'var(--warn)':'var(--up)';return`<div class="drow flash"><div class="dr-nm" style="flex:1">${r.name}</div><div style="width:60px;height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin:0 8px"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div></div><div style="font-size:11px;font-weight:600;color:${col};min-width:35px;text-align:right">${pct}%</div><div style="font-size:9px;color:var(--text3);min-width:40px;text-align:right">${r.impact||''}</div></div>`;}).join('')+'</div>':'');
   document.getElementById('hedgeRec').innerHTML='<div class="dpanel-title">헤지 권고</div><div style="font-size:11px;color:var(--text2);line-height:1.6;font-family:var(--sans);padding:4px 0">'+(d.hedge||'—')+'</div>';
 
   // News full
   document.getElementById('newsAll').innerHTML=newsH(d.news||[]);
   document.getElementById('sigsAll').innerHTML=sigH(d.signals||[]);
+}
+
+// Heatmap market selector
+function renderHeatmap(){
+  if(!D)return;
+  const m=document.getElementById('hmMarket')?.value||'kr';
+  let sec;
+  if(m==='kr')sec=D.sectors_kr||[];
+  else if(m==='us')sec=D.sectors_us||[];
+  else sec=[...(D.sectors_kr||[]),...(D.sectors_us||[])];
+  document.getElementById('ovHeatmap').innerHTML=heatmapH(sec);
 }
 </script>
 </body>
