@@ -342,7 +342,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="news-sig"><div class="news-panel"><div class="panel-hd">📡 속보 전체</div><div id="newsAll"></div></div><div class="sig-panel"><div class="panel-hd">🎯 시그널 전체</div><div id="sigsAll"></div></div></div>
   </div>
 </div>
-<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (Haiku×2+Sonnet×1) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
+<div class="cost-bar" id="costBar" style="display:none">API: <span id="costCalls">0</span>회 (Haiku×1+Sonnet×2) | In: <span id="costIn">0</span> | Out: <span id="costOut">0</span> | Cost: <span id="costUsd">$0.000</span></div>
 <div class="footer" id="appFooter" style="display:none">APEX CAPITAL TERMINAL v3.5 — HEDGE FUND GRADE · AI LIVE | Token-Optimized Dynamic Engine</div>
 
 <script>
@@ -394,24 +394,27 @@ function today(){const d=new Date();return d.toLocaleDateString('ko-KR',{timeZon
 function todayISO(){return new Date().toISOString().split('T')[0];}
 function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
 
-const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble. Use web search for REAL-TIME market data at this exact moment. Never guess. Be concise — minimize token usage while maintaining data accuracy.';
+const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble. You MUST use web_search tool to get REAL-TIME live market data. Never use cached or old data. Search for current prices as of right now. Be concise — minimize token usage while maintaining data accuracy.';
 
-function P1(){return `NOW:${todayISO()} ${nowKST()}KST. Web search LATEST prices NOW. JSON only. All USD.
-{"i":[[name,price,chg%,note]x12:KOSPI,KOSDAQ,S&P500,NASDAQ,DOW,Russell2000,Nikkei,HangSeng,Shanghai,DAX,FTSE100,ASX200],
-"f":[[name,rate,chg%]x8:USD/KRW,JPY/KRW,EUR/KRW,CNY/KRW,EUR/USD,USD/JPY,GBP/USD,DXY],
-"c":[[name,price,chg%,unit]x11:WTI,Brent,NatGas,Gold,Silver,Copper,Lithium,Wheat,Corn,LeanHogs,IronOre],
-"b":[[name,yield,chg]x4:US10Y,US2Y,KR10Y,VIX],
-"cr":[[name,price_usd,chg%]x5:BTC,ETH,SOL,XRP,BNB]}`;}
+function P1(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web for LATEST real-time market prices right now. Return ONLY valid JSON, no text.
 
-function P2(){return `NOW:${todayISO()} ${nowKST()}KST. Web search REAL-TIME. All USD. JSON only.
-Today's movers only(biggest moves/volume/news).
-{"kr":[10 KR stocks:[name,ticker,price_usd,chg%,reason]],
-"us":[10 US stocks:[name,ticker,price_usd,chg%,reason]],
-"gl":[8 Asia+EU:[name,ticker,price_usd,chg%,reason]],
-"sec_kr":[12 KR sectors:[name,chg%,signal,conf1-5,reason,theme,[[stk,chg%]x3]]],
-"sec_us":[11 US sectors(Tech,Health,Fin,Energy,CDisc,CStap,Indust,Mat,Util,RE,Comm):[name,chg%,signal,conf1-5,reason,theme,[[stk,chg%]x3]]],
-"sd":{"k":[[who,net$M]x4:Foreign,Inst,Pension,Retail],"q":[[who,net$M]x4]},
-"flow_top":{"kr_buy":[5 KR stocks with largest foreign+inst NET BUY today:[name,net$M]],"kr_sell":[5 largest NET SELL:[name,net$M]],"us_buy":[5 US stocks with largest inst inflow:[name,net$M]],"us_sell":[5 largest outflow:[name,net$M]]}}`;}
+Return this exact JSON structure with real current values:
+{"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
+"f":[["USD/KRW",0,0],["JPY/KRW",0,0],["EUR/KRW",0,0],["CNY/KRW",0,0],["EUR/USD",0,0],["USD/JPY",0,0],["GBP/USD",0,0],["DXY",0,0]],
+"c":[["WTI",0,0,"$/bbl"],["Brent",0,0,"$/bbl"],["NatGas",0,0,"$/MMBtu"],["Gold",0,0,"$/oz"],["Silver",0,0,"$/oz"],["Copper",0,0,"$/lb"],["Lithium",0,0,"$/t"],["Wheat",0,0,"$/bu"],["Corn",0,0,"$/bu"],["LeanHogs",0,0,"¢/lb"],["IronOre",0,0,"$/t"]],
+"b":[["US10Y",0,0],["US2Y",0,0],["KR10Y",0,0],["VIX",0,0]],
+"cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}
+Replace all 0s with actual current values. Format: [name, price, change%, note_or_unit].`;}
+
+function P2(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web for TODAY's real-time stock/sector data. All prices in USD. Return ONLY valid JSON.
+
+{"kr":[["stock_name","ticker",price_usd,change_pct,"reason for move"],...10 Korean stocks with biggest moves today],
+"us":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 US stocks with biggest moves today],
+"gl":[["stock_name","ticker",price_usd,change_pct,"reason"],...8 Asia+Europe stocks],
+"sec_kr":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...12 Korean sectors],
+"sec_us":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...11 US sectors: Technology,Healthcare,Financials,Energy,ConsumerDiscretionary,ConsumerStaples,Industrials,Materials,Utilities,RealEstate,Communication],
+"sd":{"k":[["Foreign",net_millions_usd],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]},
+"flow_top":{"kr_buy":[["stock",net_$M],...5 largest foreign+inst net buy],"kr_sell":[["stock",net_$M],...5 largest net sell],"us_buy":[["stock",net_$M],...5 largest inst inflow],"us_sell":[["stock",net_$M],...5 largest outflow]}}`;}
 
 function P3(){return `NOW:${todayISO()} ${nowKST()}KST. CIO $10B+ hedge fund. Web search for BREAKING news RIGHT NOW. JSON only.
 {"n":[8 news as of NOW. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action point: what to do about this news(Korean,1sentence)"]],
@@ -438,8 +441,8 @@ async function loadAllData(first=false){
   try{
     if(first)setStep(0);
     const [r1,r2,r3]=await Promise.all([
-      safeFetch(()=>callClaude(P1(),SYS,2000,true,2,HAIKU),'P1-numbers'),     // Haiku: cheap data fetch
-      safeFetch(()=>callClaude(P2(),SYS,3500,true,2,HAIKU),'P2-stocks'),      // Haiku: cheap data fetch + flow_top
+      safeFetch(()=>callClaude(P1(),SYS,2500,true,2,HAIKU),'P1-numbers'),     // Haiku: data fetch with explicit schema
+      safeFetch(()=>callClaude(P2(),SYS,4096,true,2,SONNET),'P2-stocks'),     // Sonnet: accurate stocks+sectors
       safeFetch(()=>callClaude(P3(),SYS,4096,true,2,SONNET),'P3-insight')     // Sonnet: smart analysis
     ]);
     if(first)setStep(3);
@@ -573,10 +576,10 @@ function renderAll(d){
   document.getElementById('monthlyText').innerHTML=d.monthly||'—';
 
   // Overview indices
-  document.getElementById('ovIndices').innerHTML=Object.values(d.indices||{}).slice(0,8).map(idxCard).join('');
+  document.getElementById('ovIndices').innerHTML=Object.values(d.indices||{}).map(idxCard).join('');
 
   // Overview macro
-  const fxV=Object.values(d.fx||{}).slice(0,6),coV=Object.values(d.commodities||{}).slice(0,6),crV=Object.values(d.crypto||{});
+  const fxV=Object.values(d.fx||{}),coV=Object.values(d.commodities||{}),crV=Object.values(d.crypto||{});
   document.getElementById('ovMacro').innerHTML=
     `<div class="dpanel flash"><div class="dpanel-title">FX — 환율</div>${dpRows(fxV,i=>fmt(i.val,decF(i.val)))}</div>`+
     `<div class="dpanel flash"><div class="dpanel-title">COMMODITIES</div>${dpRows(coV,i=>fmt(i.val,decF(i.val))+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''))}</div>`+
@@ -704,7 +707,7 @@ async function runAnalysis(){
   btn.disabled=true;btn.textContent='분석 중...';
   document.getElementById('analysisStatus').textContent='AI 분석 진행 중... (Sonnet)';
   try{
-    const prompt=`NOW:${todayISO()} ${nowKST()}KST. Analyze stock ticker "${ticker}". Web search for LATEST data. JSON only. All amounts USD.
+    const prompt=`Current date: ${todayISO()}, Current time: ${nowKST()} KST. Analyze stock ticker "${ticker}" as of TODAY ${todayISO()}. Search web for the LATEST real-time data for this stock RIGHT NOW. Return ONLY valid JSON. All amounts in USD.
 {"name":"company name","ticker":"${ticker}","price_usd":0,"chg%":0,"market":"KR/US/etc",
 "summary":"3-4문장 종합 분석. 현재 상태, 최근 동향, 핵심 포인트. HTML OK.",
 "flow":{"foreign_net":"순매수/순매도 $M","inst_net":"기관 $M","trend":"최근 5일 수급 방향","reason":"수급 변화 이유 1-2문장"},
@@ -770,7 +773,13 @@ function renderHeatmap(){
   if(m==='kr')sec=D.sectors_kr||[];
   else if(m==='us')sec=D.sectors_us||[];
   else sec=[...(D.sectors_kr||[]),...(D.sectors_us||[])];
-  document.getElementById('ovHeatmap').innerHTML=heatmapH(sec);
+  // Fallback: if selected market has no data, try all available
+  if(!sec.length) sec=[...(D.sectors_kr||[]),...(D.sectors_us||[])];
+  const html=heatmapH(sec);
+  document.getElementById('ovHeatmap').innerHTML=html||'<div style="padding:12px;color:var(--text3);font-size:11px">섹터 데이터 로딩 중... REFRESH를 눌러주세요</div>';
+  // Also update sectors page heatmap
+  const secPage=document.getElementById('secHeatmap');
+  if(secPage)secPage.innerHTML=heatmapH([...(D.sectors_kr||[]),...(D.sectors_us||[])]);
 }
 </script>
 </body>
