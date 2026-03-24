@@ -419,7 +419,7 @@ function P2(){return `EXACT TIME: ${todayISO()} ${nowKST()} KST. You MUST web se
 "flow_top":{"kr_buy":[["stock",net_$M],...5 largest foreign+inst net buy],"kr_sell":[["stock",net_$M],...5 largest net sell],"us_buy":[["stock",net_$M],...5 largest inst inflow],"us_sell":[["stock",net_$M],...5 largest outflow]}}`;}
 
 function P3(){return `EXACT TIME RIGHT NOW: ${todayISO()} ${nowKST()} KST. You MUST search web for news/data from TODAY ${todayISO()} ONLY. Do NOT use old/cached data. CIO $10B+ hedge fund. JSON only.
-{"n":[8 BREAKING news from TODAY ${todayISO()} ONLY. Must be today's date. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action point(Korean,1sentence)"]],
+{"n":[8 BREAKING news published TODAY ${todayISO()} between 00:00~${nowKST()} KST ONLY. Reject any news from yesterday or earlier. Newest first. Each:["HH:MM","headline_KR","HOT/WARN/TRADE/ECO","hedge fund action(Korean,1sentence)"]],
 "sg":[6 trade signals NOW. Each:["stock","LONG/SHORT/EXIT/WATCH","entry logic",conf1-5,"target","stop"]],
 "cal":[5 events this+next week. Each:["MM/DD","HH:MM","event_KR","high/medium/low","forecast"]],
 "br":["CIO 브리핑1: ${todayISO()} ${nowKST()}KST 기준 실시간 장세 요약 2-3문장(지금 시장 상태, 전일대비 변화, 주도섹터). HTML OK.","CIO 브리핑2: 오늘 ${todayISO()} 수급/포지션 2-3문장(외국인/기관 방향, 프로그램매매, 포지션 권고 롱/숏+AUM%). HTML OK.","CIO 브리핑3: 오늘 ${todayISO()} 리스크/이벤트 2-3문장(핵심 리스크, 블랙스완 시나리오, 오늘 잔여 이벤트). HTML OK."],
@@ -495,10 +495,12 @@ function mergeData(r1,r2,r3){
   d.kr_stocks=(r2.kr||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   d.us_stocks=(r2.us||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   d.gl_stocks=(r2.gl||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
-  // Sectors
-  d.sectors_kr=(r2.sec_kr||r2.sec||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
-  d.sectors_us=(r2.sec_us||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
+  // Sectors — robust parsing: handle both array and object format
+  const parseSec=raw=>{if(!raw||!Array.isArray(raw))return[];return raw.map(r=>{if(Array.isArray(r))return{name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]};if(typeof r==='object')return{name:r.name||r.sector||'',chg:r.change||r.chg||0,signal:r.signal||'HOLD',conf:r.confidence||r.conf||3,reason:r.reason||'',theme:r.theme||'',tops:r.top_stocks||r.tops||[]};return null;}).filter(Boolean);};
+  d.sectors_kr=parseSec(r2.sec_kr||r2.sec||[]);
+  d.sectors_us=parseSec(r2.sec_us||[]);
   d.sectors=d.sectors_kr;
+  console.log('[APEX] sectors_kr:',d.sectors_kr.length,'sectors_us:',d.sectors_us.length,'raw_sec_kr:',JSON.stringify((r2.sec_kr||[]).slice(0,1)).slice(0,200));
   // Supply
   d.supply={kospi:(r2.sd&&r2.sd.k||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])})),kosdaq:(r2.sd&&r2.sd.q||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])}))};
   // Flow top/bottom stocks
@@ -662,8 +664,8 @@ function renderAll(d){
   document.getElementById('cryptoKimchi').innerHTML='<div class="dpanel-title">김치프리미엄</div><div class="drow"><div class="dr-nm">BTC (KRW)</div><div class="dr-val">₩'+fmt(btcV*usdkrw,0)+'</div></div>';
   document.getElementById('cryptoFear').innerHTML='<div class="dpanel-title">공포탐욕·도미넌스</div>'+(vix?'<div class="drow"><div class="dr-nm">VIX</div><div class="dr-val '+cls(vix.chg)+'">'+fmt(vix.val,2)+'</div></div>':'');
 
-  // Sectors page
-  document.getElementById('secHeatmap').innerHTML=heatmapH(d.sectors_kr);
+  // Sectors page — show ALL sectors (KR+US)
+  document.getElementById('secHeatmap').innerHTML=heatmapH([...(d.sectors_kr||[]),...(d.sectors_us||[])]);
   const sm={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'};
   const allSec=[...(d.sectors_kr||[]),...(d.sectors_us||[])];
   document.getElementById('secDetail').innerHTML=allSec.map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div>${tops?'<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'+tops+'</div>':''}</div>`;}).join('');
