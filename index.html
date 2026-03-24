@@ -371,7 +371,7 @@ async function callClaude(prompt,sys,maxTok,search=true,retries=2,model=HAIKU,ma
   for(let attempt=0;attempt<=retries;attempt++){
     try{
       const body={model:model,max_tokens:maxTok,system:sys,messages:[{role:'user',content:prompt}]};
-      if(search)body.tools=[{"type":"web_search_20250305","name":"web_search","max_uses":maxSearch,"search_context_size":"low"}];
+      if(search)body.tools=[{"type":"web_search_20250305","name":"web_search","max_uses":maxSearch}];
       const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify(body)});
       if(!r.ok){const e=await r.text();if(attempt<retries){await new Promise(w=>setTimeout(w,2000));continue;}throw new Error('API '+r.status+': '+e.slice(0,80));}
       const d=await r.json();
