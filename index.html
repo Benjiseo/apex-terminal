@@ -408,9 +408,9 @@ Replace all 0s with actual current values. Format: [name, price, change%, note_o
 
 function P2(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web for TODAY's real-time stock/sector data. All prices in USD. Return ONLY valid JSON.
 
-{"kr":[["stock_name","ticker",price_usd,change_pct,"reason for move"],...10 Korean stocks with biggest moves today],
-"us":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 US stocks with biggest moves today],
-"gl":[["stock_name","ticker",price_usd,change_pct,"reason"],...8 Asia+Europe stocks],
+{"kr":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 Korean stocks ranked by HIGHEST DOLLAR VOLUME (trading value in USD) today],
+"us":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 US stocks ranked by HIGHEST DOLLAR VOLUME (trading value in USD) today],
+"gl":[["stock_name","ticker",price_usd,change_pct,"reason"],...8 Asia+Europe stocks ranked by HIGHEST DOLLAR VOLUME today],
 "sec_kr":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...12 Korean sectors],
 "sec_us":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...11 US sectors: Technology,Healthcare,Financials,Energy,ConsumerDiscretionary,ConsumerStaples,Industrials,Materials,Utilities,RealEstate,Communication],
 "sd":{"k":[["Foreign",net_millions_usd],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]},
@@ -576,14 +576,18 @@ function renderAll(d){
   document.getElementById('monthlyText').innerHTML=d.monthly||'—';
 
   // Overview indices
-  document.getElementById('ovIndices').innerHTML=Object.values(d.indices||{}).map(idxCard).join('');
+  const idxArr=Object.values(d.indices||{});
+  document.getElementById('ovIndices').innerHTML=idxArr.length?idxArr.map(idxCard).join(''):'<div style="padding:10px;color:var(--text3);font-size:11px">지수 데이터 로딩 중... REFRESH 눌러주세요</div>';
 
   // Overview macro
   const fxV=Object.values(d.fx||{}),coV=Object.values(d.commodities||{}),crV=Object.values(d.crypto||{});
+  const fxH=fxV.length?dpRows(fxV,i=>fmt(i.val,decF(i.val))):'<div style="padding:8px;color:var(--text3);font-size:10px">환율 데이터 없음</div>';
+  const coH=coV.length?dpRows(coV,i=>fmt(i.val,decF(i.val))+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':'')):'<div style="padding:8px;color:var(--text3);font-size:10px">원자재 데이터 없음</div>';
+  const crH=crV.length?dpRows(crV,i=>'$'+fmt(i.val,decF(i.val))):'<div style="padding:8px;color:var(--text3);font-size:10px">가상자산 데이터 없음</div>';
   document.getElementById('ovMacro').innerHTML=
-    `<div class="dpanel flash"><div class="dpanel-title">FX — 환율</div>${dpRows(fxV,i=>fmt(i.val,decF(i.val)))}</div>`+
-    `<div class="dpanel flash"><div class="dpanel-title">COMMODITIES</div>${dpRows(coV,i=>fmt(i.val,decF(i.val))+(i.unit?'<span class="dr-unit">'+i.unit+'</span>':''))}</div>`+
-    `<div class="dpanel flash"><div class="dpanel-title">CRYPTO</div>${dpRows(crV,i=>'$'+fmt(i.val,decF(i.val)))}</div>`;
+    `<div class="dpanel flash"><div class="dpanel-title">FX — 환율</div>${fxH}</div>`+
+    `<div class="dpanel flash"><div class="dpanel-title">COMMODITIES — 원자재</div>${coH}</div>`+
+    `<div class="dpanel flash"><div class="dpanel-title">CRYPTO — 가상자산</div>${crH}</div>`;
 
   renderHeatmap();
   document.getElementById('hmTime').textContent=nowKST()+' KST';
