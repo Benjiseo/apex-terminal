@@ -408,13 +408,13 @@ Return this exact JSON structure with real current values:
 "cr":[["BTC",0,0],["ETH",0,0],["SOL",0,0],["XRP",0,0],["BNB",0,0]]}
 Replace all 0s with actual current values. Format: [name, price, change%, note_or_unit].`;}
 
-function P2(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web for TODAY's real-time stock/sector data. All prices in USD. Return ONLY valid JSON.
+function P2(){return `EXACT TIME: ${todayISO()} ${nowKST()} KST. You MUST web search for TODAY ${todayISO()} real-time data ONLY. All prices USD. JSON only.
 
-{"kr":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 Korean stocks ranked by HIGHEST DOLLAR VOLUME (trading value in USD) today],
-"us":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 US stocks ranked by HIGHEST DOLLAR VOLUME (trading value in USD) today],
-"gl":[["stock_name","ticker",price_usd,change_pct,"reason"],...8 Asia+Europe stocks ranked by HIGHEST DOLLAR VOLUME today],
-"sec_kr":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...12 Korean sectors],
-"sec_us":[["sector_name",change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"reason","theme",[["stock1",chg_pct],["stock2",chg_pct],["stock3",chg_pct]]],...11 US sectors: Technology,Healthcare,Financials,Energy,ConsumerDiscretionary,ConsumerStaples,Industrials,Materials,Utilities,RealEstate,Communication],
+{"kr":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 Korean stocks by HIGHEST DOLLAR VOLUME today ${todayISO()}],
+"us":[["stock_name","ticker",price_usd,change_pct,"reason"],...10 US stocks by HIGHEST DOLLAR VOLUME today ${todayISO()}],
+"gl":[["stock_name","ticker",price_usd,change_pct,"reason"],...8 Asia+Europe stocks by HIGHEST DOLLAR VOLUME today],
+"sec_kr":[["sector_name",today_change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"today's reason","theme",[["top_stock1",chg%],["top_stock2",chg%],["top_stock3",chg%]]],...12 Korean sectors with TODAY's real-time change%],
+"sec_us":[["sector_name",today_change_pct,"BUY/SELL/HOLD/WATCH",confidence_1to5,"today's reason","theme",[["top_stock1",chg%],["top_stock2",chg%],["top_stock3",chg%]]],...11 US sectors(Tech,Health,Fin,Energy,CDisc,CStap,Indust,Mat,Util,RE,Comm) with TODAY's real-time change%],
 "sd":{"k":[["Foreign",net_millions_usd],["Institution",0],["Pension",0],["Retail",0]],"q":[["Foreign",0],["Institution",0],["Pension",0],["Retail",0]]},
 "flow_top":{"kr_buy":[["stock",net_$M],...5 largest foreign+inst net buy],"kr_sell":[["stock",net_$M],...5 largest net sell],"us_buy":[["stock",net_$M],...5 largest inst inflow],"us_sell":[["stock",net_$M],...5 largest outflow]}}`;}
 
