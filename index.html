@@ -260,6 +260,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
 <div class="main" id="appMain" style="display:none">
   <div class="page active" id="page-overview">
     <div class="brief-bar"><div class="brief-icon">📡</div><div class="brief-body"><div class="brief-title">HEAD OF RESEARCH — AI 브리핑</div><div class="brief-text" id="briefText">로딩 중...</div><div class="brief-updated" id="briefUpdated"></div></div></div>
+    <div class="data2"><div class="brief-bar" style="border-color:rgba(99,132,255,.15)"><div class="brief-icon">📅</div><div class="brief-body"><div class="brief-title">WEEKLY OUTLOOK</div><div class="brief-text" id="weeklyText">—</div></div></div><div class="brief-bar" style="border-color:rgba(255,195,0,.15)"><div class="brief-icon">📊</div><div class="brief-body"><div class="brief-title">MONTHLY TREND</div><div class="brief-text" id="monthlyText">—</div></div></div></div>
     <div><div class="sec-label">글로벌 주요 지수</div><div class="idx-grid" id="ovIndices"></div></div>
     <div><div class="sec-label">환율 · 원자재 · 가상자산</div><div class="data3" id="ovMacro"></div></div>
     <div><div class="sec-label">섹터 히트맵</div><div class="heatmap" id="ovHeatmap"></div></div>
@@ -363,15 +364,14 @@ function P1(){return `${today()} ${nowKST()} KST 기준. 웹검색 필수.
 }`;}
 
 // CALL 2: Dynamic stocks + sectors (NO fixed list!)
-function P2(){return `${today()} ${nowKST()} KST. 웹검색 필수.
-오늘 실제 시장에서 가장 주목할 종목을 찾아라. 고정 목록 아님 — 오늘 실제로 급등/급락/거래량폭증/뉴스있는 종목.
+function P2(){return `${today()} ${nowKST()} KST. 웹검색 필수. 프랍 트레이더 데스크 관점.
+고정 목록 아님. 오늘 실제 급등/급락/거래량폭증/뉴스발생 종목만.
 
-{"kr":[한국 시총상위+오늘주도주 10개. 각: [이름,티커,현재가(원),등락률%,사유]],
-"us":[미국 Mag7+오늘핫종목 10개. 각: [이름,티커,현재가($),등락률%,사유]],
-"gl":[아시아+유럽 핵심 8개. 각: [이름,티커,현재가,등락률%,사유]],
-"sec":[한국 주요 12섹터. 각: [섹터명,등락률%,시그널(BUY/SELL/HOLD/WATCH),신뢰도1-5,근거한줄,테마키워드]],
-"sd":{"k":[KOSPI 외국인/기관/연기금/개인 순매수(억원). 각:[주체,순매수액]],
-"q":[KOSDAQ 동일형식]}
+{"kr":[한국 시총상위+오늘주도주 10개. 각:[이름,티커,현재가(원),등락률%,사유한줄]],
+"us":[미국 Mag7+오늘핫종목 10개. 각:[이름,티커,현재가($),등락률%,사유한줄]],
+"gl":[아시아+유럽 핵심 8개. 각:[이름,티커,현재가,등락률%,사유한줄]],
+"sec":[한국 주요 12섹터. 각:[섹터명,등락률%,시그널(BUY/SELL/HOLD/WATCH),신뢰도1-5,근거한줄,테마키워드,[해당섹터 오늘 등락 상위3종목 각:[종목명,등락률%]]]],
+"sd":{"k":[KOSPI 외국인/기관/연기금/개인. 각:[주체,순매수억원]],"q":[KOSDAQ 동일]}
 }`;}
 
 // CALL 3: News + Signals + Briefing + Risk (all dynamic, every refresh)
@@ -379,9 +379,11 @@ function P3(){return `${today()} ${nowKST()} KST. 웹검색 필수. 1조원+ 운
 
 {"n":[오늘 실제 뉴스 8건. 시간순. 각:[시각HH:MM,제목,카테고리(HOT/WARN/TRADE/ECO),헤지펀드 영향도 분석]],
 "sg":[오늘 실제 시장 기반 트레이드 시그널 6건. 각:[종목명,액션(LONG/SHORT/EXIT/WATCH),근거,신뢰도1-5,목표가,손절가]],
-"br":"CIO 브리핑 5-6문장. 반드시 오늘 날짜 언급. 1) 장 분위기 한줄 2) 주도섹터/테마 3) 외국인/기관 수급 방향 4) 핵심 리스크 5) 권장 포지션(롱/숏/뉴트럴+비중) 6) 오늘 주목할 이벤트. HTML태그: <strong>,<span class=up>,<span class=dn>,<span class=acc> 사용.",
-"risk":{"vixLevel":"","yieldCurve":"","putCallRatio":0,"breadth":{"advDecl":"","newHighLow":""},"sentiment":"","keyRisk":"주요 리스크 설명"},
-"hedge":"리스크 수준 기반 헤지 권고 2-3문장. 포지션 사이즈, VIX 헤지, 섹터 로테이션 등."
+"br":"CIO 브리핑 5-6문장. 프랍 트레이더 데스크장 관점. 반드시 오늘 날짜 언급. 1)장 분위기+전일대비 변화 2)주도섹터와 약세섹터 3)외국인/기관 수급+프로그램매매 방향 4)핵심 리스크+블랙스완 시나리오 5)권장 포지션(롱/숏/뉴트럴+비중%)+포지션사이즈 6)오늘 잔여 이벤트. HTML태그:<strong>,<span class=up>,<span class=dn>,<span class=acc>",
+"wk":"이번 주 시장 흐름 2-3문장. 주초대비 변화, 주간 주도테마, 글로벌 이벤트 영향. HTML태그 사용가능.",
+"mo":"이번 달 시장 흐름 2-3문장. 월초대비 변화, 섹터 로테이션 방향, 매크로 트렌드. HTML태그 사용가능.",
+"risk":{"vixLevel":"","yieldCurve":"","putCallRatio":0,"breadth":{"advDecl":"","newHighLow":""},"sentiment":"","keyRisk":""},
+"hedge":"헤지 권고 2-3문장. 포지션사이즈(AUM대비 %), VIX헤지, 섹터로테이션, 옵션전략 등."
 }`;}
 
 async function loadAllData(first=false){
@@ -441,7 +443,7 @@ function mergeData(r1,r2,r3){
   d.us_stocks=(r2.us||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   d.gl_stocks=(r2.gl||[]).map(r=>({name:r[0],ticker:r[1],val:r[2],chg:r[3],reason:r[4]||''}));
   // Sectors
-  d.sectors=(r2.sec||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5]}));
+  d.sectors=(r2.sec||[]).map(r=>({name:r[0],chg:r[1],signal:r[2],conf:r[3],reason:r[4],theme:r[5],tops:r[6]||[]}));
   // Supply
   d.supply={kospi:(r2.sd&&r2.sd.k||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])})),kosdaq:(r2.sd&&r2.sd.q||[]).map(r=>({who:r[0],net:r[1],abs:Math.abs(r[1])}))};
   // Insight
@@ -455,6 +457,8 @@ function decodeInsight(r3){
     news:(r3.n||[]).map(r=>({time:r[0],title:r[1],badge:r[2],cat:bm[r[2]]||'nb-eco',impact:r[3]})),
     signals:(r3.sg||[]).map(r=>({ticker:r[0],action:r[1],reason:r[2],conf:r[3],target:r[4]||'',stop:r[5]||''})),
     brief:r3.br||'',
+    weekly:r3.wk||'',
+    monthly:r3.mo||'',
     risk:r3.risk||{},
     hedge:r3.hedge||''
   };
@@ -505,8 +509,10 @@ function renderAll(d){
   const tk=[d.indices?.kospi,d.indices?.kosdaq,d.indices?.sp500,d.indices?.nasdaq,d.fx?.usdkrw,d.commodities?.wti,d.commodities?.gold,d.crypto?.BTC||Object.values(d.crypto||{})[0]].filter(Boolean);
   document.getElementById('tickerTrack').innerHTML=[...tk,...tk].map(i=>`<div class="t-item"><span class="t-lbl">${i.name}</span><span class="t-val">${fmt(i.val,decF(i.val))}</span><span class="t-chg ${cls(i.chg)}">${sign(i.chg)}${fmt(i.chg,2)}%</span></div>`).join('');
 
-  // Brief
+  // Brief + Weekly + Monthly
   document.getElementById('briefText').innerHTML=d.brief||'—';
+  document.getElementById('weeklyText').innerHTML=d.weekly||'—';
+  document.getElementById('monthlyText').innerHTML=d.monthly||'—';
 
   // Overview indices
   document.getElementById('ovIndices').innerHTML=Object.values(d.indices||{}).slice(0,8).map(idxCard).join('');
@@ -561,7 +567,7 @@ function renderAll(d){
   // Sectors
   document.getElementById('secHeatmap').innerHTML=heatmapH(d.sectors);
   const sm={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'};
-  document.getElementById('secDetail').innerHTML=(d.sectors||[]).map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div></div>`;}).join('');
+  document.getElementById('secDetail').innerHTML=(d.sectors||[]).map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div>${tops?'<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'+tops+'</div>':''}</div>`;}).join('');
 
   // Flow
   document.getElementById('supKospi').innerHTML='<div class="dpanel-title">KOSPI 수급 (억원)</div>'+sdH(d.supply?.kospi);
