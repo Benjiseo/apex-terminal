@@ -300,7 +300,9 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var
     <div class="data2"><div><div class="sec-label">김치프리미엄</div><div class="dpanel" id="cryptoKimchi"></div></div><div><div class="sec-label">공포탐욕·도미넌스</div><div class="dpanel" id="cryptoFear"></div></div></div>
   </div>
   <div class="page" id="page-sectors">
-    <div><div class="sec-label">섹터 히트맵 (전체)</div><div class="heatmap" id="secHeatmap"></div></div>
+    <div><div class="sec-label">🇰🇷 한국 섹터 히트맵</div><div class="heatmap" id="secHeatmapKR"></div></div>
+    <div><div class="sec-label">🇺🇸 미국 섹터 히트맵</div><div class="heatmap" id="secHeatmapUS"></div></div>
+    <div><div class="sec-label">🌏 글로벌 섹터 히트맵 (KR+US)</div><div class="heatmap" id="secHeatmap"></div></div>
     <div><div class="sec-label">섹터 상세 분석</div><div class="sectors-grid" id="secDetail"></div></div>
   </div>
   <div class="page" id="page-flow">
@@ -396,11 +398,11 @@ function today(){const d=new Date();return d.toLocaleDateString('ko-KR',{timeZon
 function todayISO(){return new Date().toISOString().split('T')[0];}
 function nowKST(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'})).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
 
-const SYS='Return ONLY valid JSON. No markdown, no explanation, no code blocks, no preamble. You MUST use web_search tool to get REAL-TIME live market data. Never use cached or old data. Search for current prices as of right now. Be concise — minimize token usage while maintaining data accuracy.';
+const SYS=`Return ONLY valid JSON. No markdown, no explanation, no code blocks. You MUST call web_search multiple times to get LIVE data for TODAY ${new Date().toISOString().split('T')[0]}. Every price, index, and news item must be from TODAY. Never guess or use training data. Search web NOW for each data category.`;
 
-function P1(){return `Current time: ${todayISO()} ${nowKST()} KST. Search web for LATEST real-time market prices right now. Return ONLY valid JSON, no text.
+function P1(){return `NOW: ${todayISO()} ${nowKST()} KST. Search web for LIVE prices as of THIS MOMENT. Every value must be from TODAY ${todayISO()}. JSON only.
 
-Return this exact JSON structure with real current values:
+Fill this JSON with TODAY's real values:
 {"i":[["KOSPI",0,0,""],["KOSDAQ",0,0,""],["S&P500",0,0,""],["NASDAQ",0,0,""],["DOW",0,0,""],["Russell2000",0,0,""],["Nikkei",0,0,""],["HangSeng",0,0,""],["Shanghai",0,0,""],["DAX",0,0,""],["FTSE100",0,0,""],["ASX200",0,0,""]],
 "f":[["USD/KRW",0,0],["JPY/KRW",0,0],["EUR/KRW",0,0],["CNY/KRW",0,0],["EUR/USD",0,0],["USD/JPY",0,0],["GBP/USD",0,0],["DXY",0,0]],
 "c":[["WTI",0,0,"$/bbl"],["Brent",0,0,"$/bbl"],["NatGas",0,0,"$/MMBtu"],["Gold",0,0,"$/oz"],["Silver",0,0,"$/oz"],["Copper",0,0,"$/lb"],["Lithium",0,0,"$/t"],["Wheat",0,0,"$/bu"],["Corn",0,0,"$/bu"],["LeanHogs",0,0,"¢/lb"],["IronOre",0,0,"$/t"]],
@@ -664,8 +666,11 @@ function renderAll(d){
   document.getElementById('cryptoKimchi').innerHTML='<div class="dpanel-title">김치프리미엄</div><div class="drow"><div class="dr-nm">BTC (KRW)</div><div class="dr-val">₩'+fmt(btcV*usdkrw,0)+'</div></div>';
   document.getElementById('cryptoFear').innerHTML='<div class="dpanel-title">공포탐욕·도미넌스</div>'+(vix?'<div class="drow"><div class="dr-nm">VIX</div><div class="dr-val '+cls(vix.chg)+'">'+fmt(vix.val,2)+'</div></div>':'');
 
-  // Sectors page — show ALL sectors (KR+US)
-  document.getElementById('secHeatmap').innerHTML=heatmapH([...(d.sectors_kr||[]),...(d.sectors_us||[])]);
+  // Sectors page — KR, US, Global heatmaps
+  const secKR=d.sectors_kr||[],secUS=d.sectors_us||[];
+  document.getElementById('secHeatmapKR').innerHTML=heatmapH(secKR)||'<div style="padding:8px;color:var(--text3);font-size:10px">한국 섹터 데이터 없음</div>';
+  document.getElementById('secHeatmapUS').innerHTML=heatmapH(secUS)||'<div style="padding:8px;color:var(--text3);font-size:10px">미국 섹터 데이터 없음</div>';
+  document.getElementById('secHeatmap').innerHTML=heatmapH([...secKR,...secUS]);
   const sm={BUY:'sig-buy',SELL:'sig-sell',HOLD:'sig-hold',WATCH:'sig-watch'};
   const allSec=[...(d.sectors_kr||[]),...(d.sectors_us||[])];
   document.getElementById('secDetail').innerHTML=allSec.map(s=>{const p=Math.min(Math.abs(s.chg||0)/5*100,100);const tops=(s.tops||[]).map(t=>`<span style="font-size:9px;color:${(t[1]||0)>=0?'var(--up)':'var(--dn)'};margin-right:6px">${t[0]} ${sign(t[1]||0)}${fmt(t[1],1)}%</span>`).join('');return`<div class="sc-card flash"><div class="sc-head"><div class="sc-name">${s.name}</div><div class="sc-chg ${cls(s.chg)}">${sign(s.chg||0)}${fmt(s.chg,2)}%</div></div><div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${p}%;background:${(s.chg||0)>=0?'var(--up)':'var(--dn)'}"></div></div><div class="sc-meta"><div class="sc-theme">${s.theme||''}</div><div class="sc-sig ${sm[s.signal]||'sig-hold'}">${s.signal||'HOLD'}</div></div><div class="sc-reason">${s.reason||''}</div>${tops?'<div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">'+tops+'</div>':''}</div>`;}).join('');
